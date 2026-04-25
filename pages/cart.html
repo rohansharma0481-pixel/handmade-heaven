@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Your Cart | Handmade Heaven</title>
+  <link rel="stylesheet" href="../css/style.css"/>
+  <style>
+    .checkout-overlay {
+      position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+      background: rgba(0,0,0,0.5); z-index: 1000;
+      display: flex; align-items: center; justify-content: center;
+      padding: 1rem;
+    }
+    .checkout-modal-content {
+      background: white; border-radius: 12px; padding: 2rem;
+      width: 100%; max-width: 500px; position: relative;
+      max-height: 90vh; overflow-y: auto;
+    }
+    .checkout-modal-content .btn-close {
+      position: absolute; top: 1rem; right: 1rem; background: transparent;
+      border: none; font-size: 1.2rem; cursor: pointer; color: var(--ink);
+    }
+    .payment-list {
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      background: #fff;
+      overflow: hidden;
+      margin-top: 0.5rem;
+    }
+    .payment-card {
+      display: block;
+      border-bottom: 1px solid #e5e7eb;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .payment-card:last-child {
+      border-bottom: none;
+    }
+    .payment-card:hover {
+      background: #fafafa;
+    }
+    .payment-card input[type="radio"] {
+      display: none;
+    }
+    .pc-content {
+      display: flex;
+      align-items: flex-start;
+      padding: 1rem;
+      gap: 1rem;
+    }
+    .pc-icon {
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      border: 1px solid #e5e7eb;
+      border-radius: 4px;
+      background: #fafafa;
+      color: #374151;
+    }
+    .pc-details {
+      flex: 1;
+    }
+    .pc-title {
+      margin: 0 0 0.25rem;
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--ink);
+    }
+    .pc-subtitle {
+      margin: 0 0 0.25rem;
+      font-size: 0.85rem;
+      color: #6b7280;
+    }
+    .pc-offer {
+      margin: 0;
+      font-size: 0.8rem;
+      color: #16a34a;
+      font-weight: 500;
+    }
+    .pc-action {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding-top: 0.25rem;
+    }
+    .custom-radio {
+      width: 20px;
+      height: 20px;
+      border: 2px solid #d1d5db;
+      border-radius: 50%;
+      position: relative;
+      transition: all 0.2s;
+    }
+    .payment-card input[type="radio"]:checked + .pc-content .custom-radio {
+      border-color: var(--primary);
+    }
+    .payment-card input[type="radio"]:checked + .pc-content .custom-radio::after {
+      content: "";
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 10px;
+      height: 10px;
+      background: var(--primary);
+      border-radius: 50%;
+    }
+    .pc-expanded {
+      display: none;
+      padding: 1rem;
+      background: #f9fafb;
+      border-top: 1px solid #e5e7eb;
+    }
+  </style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="header-inner">
+    <div class="header-left">
+      <button class="hamburger-btn" id="mobile-toggle" aria-label="Menu">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+      <a href="../index.html" class="logo-wrapper">
+          <img src="../images/logo.png" alt="Handmade Heaven Logo" class="logo-img" style="height: 60px; width: auto; object-fit: contain;" />
+        </a>
+      <nav class="main-nav">
+        <a href="../index.html">Home</a>
+        <a href="products.html">Shop</a>
+        <a href="javascript:void(0)" onclick="showCustomizeModal()">Customize</a>
+        <a href="wishlist.html" id="wish-nav" style="display:none">Wishlist</a>
+        <a href="orders.html" id="orders-nav" style="display:none">Orders</a>
+      
+        <a href="about.html" class="about-nav">About</a>
+        <a href="contact.html" class="contact-nav">Contact</a>
+      </nav>
+    </div>
+    
+    <div class="header-center">
+      <div class="nav-search" onclick="document.getElementById('nav-search-input').focus()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="cursor:pointer;" onclick="handleNavSearch('nav-search-input')"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+        <input type="text" id="nav-search-input" placeholder="Search handcrafted items..." onkeydown="if(event.key==='Enter') handleNavSearch('nav-search-input')" />
+      </div>
+    </div>
+    
+    <div class="header-right header-actions">
+      <a href="cart.html" class="cart-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
+        <span class="cart-badge">0</span>
+      </a>
+      <div id="auth-area"></div>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="page-inner">
+    <h1 class="page-title">Your Cart</h1>
+    <div id="cart-root"></div>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="footer-top">
+    <div class="footer-logo-wrap"><a href="../index.html" style="text-decoration:none; display:flex; flex-direction:column; align-items:center;">
+      <div class="footer-logo-icon">
+        <img src="../images/logo.png" alt="Handmade Heaven Logo" style="height: 70px; width: auto; object-fit: contain; border-radius: 8px;" />
+      </div>
+      <h2 class="footer-brand-name">Handmade Heaven</h2>
+    </a></div>
+  </div>
+  
+  <div class="footer-main">
+    <div class="footer-col">
+      <h4>EXPLORE</h4>
+      <a href="../products.html">Shop All</a>
+      <a href="../products.html?category=Keychains">Keychains</a>
+      <a href="../products.html?category=Covers">Covers</a>
+      <a href="../products.html?category=Wall+Art">Wall Art</a>
+      <a href="../products.html">New Arrivals</a>
+    </div>
+    <div class="footer-col">
+      <h4>CUSTOMER CARE</h4>
+      <a href="#">Contact Us</a>
+      <a href="#">Shipping & Returns</a>
+      <a href="#">FAQ</a>
+      <a href="#">Size Guide</a>
+      <a href="../orders.html">Order Tracking</a>
+    </div>
+    <div class="footer-col">
+      <h4>OUR STORY</h4>
+      <a href="#">About Us</a>
+      <a href="#">Meet the Artisans</a>
+      <a href="#">Our Process</a>
+      <a href="#">Blog</a>
+      <a href="#">Press</a>
+    </div>
+    <div class="footer-col footer-col-subscribe">
+      <h4>STAY CONNECTED</h4>
+      <p>Sign up for 10% off your first order!</p>
+      <form class="subscribe-form" onsubmit="event.preventDefault(); alert('Subscribed to Newsletter!');">
+        <input type="email" placeholder="your.email@example.com" required/>
+        <button type="submit">SUBSCRIBE</button>
+      </form>
+      <div class="social-icons">
+        <a href="#" aria-label="Instagram"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg></a>
+        <a href="#" aria-label="Pinterest"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2A10 10 0 0 0 8 21.22c.4-.76.77-1.92.93-2.67l.86-3.66s-.22-.44-.22-1.09c0-1.02.59-1.78 1.33-1.78.63 0 .93.47.93 1.04 0 .63-.4 1.58-.6 2.46-.17.74.37 1.34 1.1 1.34 1.32 0 2.33-1.4 2.33-3.41 0-1.78-1.28-3.02-3.1-3.02-2.14 0-3.62 1.6-3.62 3.48 0 .63.24 1.3.54 1.67.06.07.07.13.05.2l-.17.7c-.03.1-.1.13-.2.08-1.42-.66-2.31-2.73-2.31-4.4 0-3.58 2.6-6.88 7.52-6.88 3.96 0 7.03 2.82 7.03 6.58 0 3.94-2.48 7.1-5.92 7.1-1.16 0-2.25-.6-2.62-1.32l-.71 2.7c-.26 1-.94 2.25-1.4 3.01A9.97 9.97 0 0 0 12 22a10 10 0 0 0 0-20z"/></svg></a>
+        <a href="#" aria-label="Facebook"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"></path></svg></a>
+      </div>
+    </div>
+  </div>
+  
+  <div class="footer-bottom">
+    <p>&copy; <span id="yr"></span> HAND MADE HEAVEN. All Rights Reserved. | <a href="#">Terms & Conditions</a> | <a href="#">Privacy Policy</a></p>
+    <div class="payment-icons">
+      <span class="pay-icon">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M12.5 10.2v3.8h5.4c-.7 2.3-2.6 4-5.4 4-3.3 0-6-2.7-6-6s2.7-6 6-6c1.5 0 2.9.5 3.9 1.5l2.8-2.8C17.5 3 15.1 2 12.5 2 7 2 2.5 6.5 2.5 12s4.5 10 10 10 10-4.5 10-10c0-.7-.1-1.3-.2-2H12.5z"/></svg>
+        GPay
+      </span>
+      <span class="pay-icon">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+        PhonePe
+      </span>
+      <span class="pay-icon">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12V7H5a2 2 0 0 1 2-2h14v4"></path><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"></path><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"></path></svg>
+        Paytm
+      </span>
+      <span class="pay-icon">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"></rect><line x1="2" y1="10" x2="22" y2="10"></line></svg>
+        Credit Card
+      </span>
+    </div>
+  </div>
+</footer>
+
+<script src="../js/store.js"></script>
+<script>
+  document.getElementById('yr').textContent = new Date().getFullYear();
+  renderNav();
+  const fa = document.getElementById('footer-account');
+  if (fa) {
+    fa.innerHTML = Auth.isLoggedIn()
+      ? `<a href="orders.html">My Orders</a><a href="wishlist.html">My Wishlist</a>`
+      : `<a href="login.html">Login</a><a href="signup.html">Create Account</a>`;
+  }
+
+  function renderCart() {
+    const items = Cart.getWithProducts();
+    const root = document.getElementById('cart-root');
+    if (!items.length) {
+      root.innerHTML = `<div class="empty-state"><p>Your cart is empty.</p><a href="products.html" class="btn-primary">Continue Shopping</a></div>`;
+      return;
+    }
+    const total = Cart.total();
+    const shipping = total > 200 ? 20 : 0;
+    const grandTotal = total + shipping;
+
+    root.innerHTML = `
+      <div class="cart-layout">
+        <div class="cart-items">
+          ${items.map(item => `
+            <div class="cart-item">
+              <img src="${item.product.image}" alt="${item.product.name}" class="cart-item-img"/>
+              <div class="cart-item-info">
+                <span class="cart-item-name" onclick="window.location='product-detail.html?id=${item.product.id}'">${item.product.name}</span>
+                <p class="cart-item-price">${fmt(item.product.price)} each</p>
+                <div class="cart-qty-wrap">
+                  <span>Qty</span>
+                  <input type="number" class="qty-input" value="${item.qty}" min="0" max="${item.product.stock}"
+                    onchange="updateQty(${item.productId}, this.value)" style="width:64px"/>
+                </div>
+              </div>
+              <div class="cart-item-right">
+                <span class="cart-item-total">${fmt(item.product.price * item.qty)}</span>
+                <button class="btn-remove" onclick="removeItem(${item.productId})">✕ Remove</button>
+              </div>
+            </div>`).join('')}
+        </div>
+
+        <div class="cart-summary">
+          <h2 class="summary-title">Order Summary</h2>
+          <div class="summary-row"><span>Subtotal</span><span>${fmt(total)}</span></div>
+          <div class="summary-row"><span>Shipping</span><span>${shipping === 0 ? 'Free' : fmt(shipping)}</span></div>
+          <div class="summary-row summary-total"><span>Total</span><span>${fmt(grandTotal)}</span></div>
+          ${total > 200 ? `<p class="free-ship-hint" style="color:var(--terracotta);">₹20 shipping added for orders above ₹200</p>` : `<p class="free-ship-hint">Orders up to ₹200 — Free Shipping! 🎉</p>`}
+          <button class="btn-primary btn-block btn-lg" style="margin-top:1rem" onclick="showCheckoutForm()">Proceed to Checkout</button>
+          <a href="products.html" class="btn-text btn-block" style="text-align:center;margin-top:12px">← Continue Shopping</a>
+        </div>
+      </div>`;
+  }
+
+  function updateQty(productId, qty) {
+    Cart.update(productId, parseInt(qty));
+    updateNavCart();
+    renderCart();
+  }
+
+  function removeItem(productId) {
+    Cart.remove(productId);
+    updateNavCart();
+    renderCart();
+  }
+
+  function showCheckoutForm() {
+    if (!Auth.isLoggedIn()) { window.location.href = 'login.html?next=' + encodeURIComponent('cart.html'); return; }
+    
+    const total = Cart.total();
+    const shipping = total > 200 ? 20 : 0;
+    const grandTotal = total + shipping;
+    const user = Auth.currentUser();
+
+    const overlay = document.createElement('div');
+    overlay.className = 'checkout-overlay';
+    overlay.id = 'checkout-modal';
+    overlay.innerHTML = `
+      <div class="checkout-modal-content">
+        <button class="btn-close" type="button" onclick="document.getElementById('checkout-modal').remove()">✕</button>
+        <h2 style="margin-bottom: 1.5rem; font-family: 'Playfair Display', serif;">Checkout Details</h2>
+        <form id="checkout-form" onsubmit="submitOrder(event)">
+          <div class="form-group" style="margin-bottom: 1rem;">
+            <label style="display:block; margin-bottom:0.5rem; font-size:0.9rem; color:var(--gray);">Name</label>
+            <input type="text" value="${user.name}" readonly class="form-input" style="background:#f3f4f6; color:#6b7280;"/>
+          </div>
+          <div class="form-group" style="margin-bottom: 1rem;">
+            <label style="display:block; margin-bottom:0.5rem; font-size:0.9rem; color:var(--gray);">Email</label>
+            <input type="email" value="${user.email}" readonly class="form-input" style="background:#f3f4f6; color:#6b7280;"/>
+          </div>
+          <div class="form-group" style="margin-bottom: 1rem;">
+            <label style="display:block; margin-bottom:0.5rem; font-size:0.9rem; font-weight:500;">Phone Number *</label>
+            <input type="tel" id="checkout-phone" required class="form-input" placeholder="Enter your phone number" oninput="onlyDigits(this, 'checkout-phone-err')" maxlength="10"/>
+            <span id="checkout-phone-err" style="font-size:.75rem;color:#dc2626;display:none;margin-top:.3rem;">⚠️ Only numbers are allowed in phone number.</span>
+          </div>
+          <div class="form-group" style="margin-bottom: 1rem;">
+            <label style="display:block; margin-bottom:0.5rem; font-size:0.9rem; font-weight:500;">Delivery Address *</label>
+            <div style="display:flex;flex-direction:column;gap:.6rem;">
+              <input type="text" id="checkout-addr-house" required class="form-input" placeholder="House / Flat No., Building Name" />
+              <input type="text" id="checkout-addr-street" required class="form-input" placeholder="Street / Area / Colony" />
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem;">
+                <div>
+                  <input type="text" id="checkout-addr-city" required class="form-input" placeholder="City" oninput="onlyLetters(this, 'checkout-city-err')" />
+                  <span id="checkout-city-err" style="font-size:.75rem;color:#dc2626;display:none;margin-top:.2rem;">⚠️ Only letters are allowed in City.</span>
+                </div>
+                <div>
+                  <input type="text" id="checkout-addr-state" required class="form-input" placeholder="State" oninput="onlyLetters(this, 'checkout-state-err')" />
+                  <span id="checkout-state-err" style="font-size:.75rem;color:#dc2626;display:none;margin-top:.2rem;">⚠️ Only letters are allowed in State.</span>
+                </div>
+              </div>
+              <div style="position:relative;">
+                <input type="text" id="checkout-addr-pin" required class="form-input" placeholder="PIN Code" maxlength="6" pattern="[0-9]{6}" title="Enter a valid 6-digit PIN code" oninput="pinInput(this)" style="padding-right:2rem;" />
+                <span id="checkout-pin-hint" style="font-size:.75rem;color:var(--muted);margin-top:.3rem;display:block;"></span>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 1rem;">
+            <label style="display:block; margin-bottom:0.5rem; font-size:0.9rem; font-weight:500;">Payment Method *</label>
+            <div class="payment-list">
+              <!-- UPI -->
+              <label class="payment-card" onclick="selectPayment('UPI')">
+                <input type="radio" name="payment" value="UPI" id="pay-UPI">
+                <div class="pc-content">
+                  <div class="pc-icon">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"></rect><path d="M12 12h.01"></path></svg>
+                  </div>
+                  <div class="pc-details" style="display:flex; align-items:center;">
+                    <h4 class="pc-title" style="margin:0;">UPI</h4>
+                  </div>
+                  <div class="pc-action">
+                    <div class="custom-radio"></div>
+                  </div>
+                </div>
+                <div class="pc-expanded" id="details-UPI">
+                  <div style="text-align:center;">
+                    <p style="margin-bottom: 0.5rem; font-weight: 500;">Scan to Pay: ${fmt(grandTotal)}</p>
+                    <img src="https://chart.googleapis.com/chart?chs=200x200&cht=qr&chl=upi://pay?pa=store@upi%26pn=HandmadeHeaven%26am=${grandTotal}" alt="UPI QR Code" style="max-width:200px; width:100%; height:auto; display:inline-block;" />
+                  </div>
+                </div>
+              </label>
+
+              <!-- Credit Card -->
+              <label class="payment-card" onclick="selectPayment('Card')">
+                <input type="radio" name="payment" value="Card" id="pay-Card">
+                <div class="pc-content">
+                  <div class="pc-icon">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"></rect><line x1="2" y1="10" x2="22" y2="10"></line></svg>
+                  </div>
+                  <div class="pc-details" style="display:flex; align-items:center;">
+                    <h4 class="pc-title" style="margin:0;">Credit / Debit Card</h4>
+                  </div>
+                  <div class="pc-action">
+                    <div class="custom-radio"></div>
+                  </div>
+                </div>
+                <div class="pc-expanded" id="details-Card">
+                  <div style="display:flex; flex-direction:column; gap:0.8rem;">
+                    <input type="text" class="form-input" placeholder="Card Number" style="width:100%;" />
+                    <div style="display:flex; gap:0.8rem;">
+                      <input type="text" class="form-input" placeholder="MM/YY" style="flex:1;" />
+                      <input type="text" class="form-input" placeholder="CVV" style="flex:1;" />
+                    </div>
+                  </div>
+                </div>
+              </label>
+
+              <!-- COD -->
+              <label class="payment-card" onclick="selectPayment('COD')">
+                <input type="radio" name="payment" value="COD" id="pay-COD">
+                <div class="pc-content">
+                  <div class="pc-icon">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="20" height="12" rx="2"></rect><circle cx="12" cy="12" r="2"></circle></svg>
+                  </div>
+                  <div class="pc-details" style="display:flex; align-items:center;">
+                    <h4 class="pc-title" style="margin:0;">Cash on Delivery</h4>
+                  </div>
+                  <div class="pc-action">
+                    <div class="custom-radio"></div>
+                  </div>
+                </div>
+                <div class="pc-expanded" id="details-COD">
+                  <p style="font-size: 0.95rem; color: var(--ink-light); margin:0;">Pay with cash upon delivery</p>
+                </div>
+              </label>
+            </div>
+          </div>
+          <button type="submit" id="place-order-btn" class="btn-primary btn-block btn-lg" style="margin-top:1.5rem">Confirm Order — ${fmt(grandTotal)}</button>
+        </form>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+  }
+
+  window.selectPayment = function(method) {
+    document.getElementById('pay-' + method).checked = true;
+    const allExpanded = document.querySelectorAll('.pc-expanded');
+    allExpanded.forEach(el => el.style.display = 'none');
+    document.getElementById('details-' + method).style.display = 'block';
+  };
+
+  // ── Input Validation Helpers ─────────────────────────────
+  window.onlyDigits = function(input, errId) {
+    const val = input.value;
+    const cleaned = val.replace(/[^0-9]/g, '');
+    const errEl = document.getElementById(errId);
+    if (val !== cleaned) {
+      input.value = cleaned;
+      if (errEl) { errEl.style.display = 'block'; clearTimeout(input._errTimer); input._errTimer = setTimeout(() => errEl.style.display = 'none', 2500); }
+    } else {
+      if (errEl) errEl.style.display = 'none';
+    }
+  };
+
+  window.onlyLetters = function(input, errId) {
+    const val = input.value;
+    const cleaned = val.replace(/[^a-zA-Z\s\u0900-\u097F\-\.]/g, '');
+    const errEl = document.getElementById(errId);
+    if (val !== cleaned) {
+      input.value = cleaned;
+      if (errEl) { errEl.style.display = 'block'; clearTimeout(input._errTimer); input._errTimer = setTimeout(() => errEl.style.display = 'none', 2500); }
+    } else {
+      if (errEl) errEl.style.display = 'none';
+    }
+  };
+
+  window.pinInput = function(input) {
+    const val = input.value;
+    const cleaned = val.replace(/[^0-9]/g, '');
+    const hint = document.getElementById('checkout-pin-hint');
+    if (val !== cleaned) {
+      input.value = cleaned;
+      if (hint) { hint.style.color = '#dc2626'; hint.textContent = '⚠️ Only numbers are allowed in PIN Code.'; clearTimeout(input._errTimer); input._errTimer = setTimeout(() => { if(hint.textContent.includes('numbers')) hint.textContent = ''; }, 2500); }
+    }
+    fetchCheckoutPin(cleaned);
+  };
+
+  window.fetchCheckoutPin = function(pin) {
+    const hint = document.getElementById('checkout-pin-hint');
+    if (pin.length !== 6 || !/^[0-9]{6}$/.test(pin)) {
+      if (hint) hint.textContent = '';
+      return;
+    }
+    if (hint) hint.textContent = '🔍 Looking up location...';
+    fetch(`https://api.postalpincode.in/pincode/${pin}`)
+      .then(r => r.json())
+      .then(data => {
+        if (data && data[0] && data[0].Status === 'Success' && data[0].PostOffice && data[0].PostOffice.length > 0) {
+          const po = data[0].PostOffice[0];
+          const cityEl = document.getElementById('checkout-addr-city');
+          const stateEl = document.getElementById('checkout-addr-state');
+          if (cityEl && !cityEl.value) cityEl.value = po.District || po.Name || '';
+          else if (cityEl) cityEl.value = po.District || po.Name || cityEl.value;
+          if (stateEl) stateEl.value = po.State || '';
+          if (hint) hint.textContent = `✅ ${po.Name}, ${po.District}, ${po.State}`;
+        } else {
+          if (hint) hint.textContent = '❌ PIN code not found. Please enter city & state manually.';
+        }
+      })
+      .catch(() => {
+        if (hint) hint.textContent = '⚠️ Could not fetch location. Enter manually.';
+      });
+  };
+
+
+
+  window.submitOrder = function(e) {
+    e.preventDefault();
+    const phone = document.getElementById('checkout-phone').value;
+    const house = document.getElementById('checkout-addr-house').value;
+    const street = document.getElementById('checkout-addr-street').value;
+    const city = document.getElementById('checkout-addr-city').value;
+    const state = document.getElementById('checkout-addr-state').value;
+    const pin = document.getElementById('checkout-addr-pin').value;
+    const address = `${house}, ${street}, ${city}, ${state} - ${pin}`;
+    const paymentMethod = document.querySelector('input[name="payment"]:checked').value;
+    const details = { phone, address, paymentMethod };
+    const order = Orders.place(details);
+    if (order && order.error) {
+      showFlash(order.error, 'error');
+      return;
+    }
+    if (order) {
+      updateNavCart();
+      window.location.href = `orders.html?new=${order.id}`;
+    }
+  };
+
+  renderCart();
+</script>
+</body>
+</html>
+
+
+
+
+
+

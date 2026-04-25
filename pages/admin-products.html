@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Admin Products Manager | Handmade Heaven</title>
+  <link rel="stylesheet" href="../css/style.css"/>
+  <style>
+    .admin-container { max-width: 1200px; margin: 3rem auto; padding: 0 1rem; }
+    .page-title { font-size: 2rem; font-weight: 700; color: var(--ink); margin-bottom: 2rem; display: flex; align-items: center; justify-content: space-between; }
+    .btn-action { padding: 0.5rem 1rem; font-size: 0.9rem; font-weight: 600; border-radius: 6px; cursor: pointer; border: none; }
+    .btn-add { background: var(--primary); color: white; }
+    .btn-edit { background: #3b82f6; color: white; }
+    .btn-delete { background: #ef4444; color: white; }
+    
+    /* Product Form Modal */
+    .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 1000; }
+    .modal.active { display: flex; }
+    .modal-content { background: var(--bg-card); padding: 2rem; border-radius: 12px; max-width: 500px; width: 100%; position: relative; border: 1px solid var(--border); }
+    .modal-close { position: absolute; top: 1rem; right: 1rem; font-size: 1.5rem; cursor: pointer; color: var(--muted); background: none; border: none; }
+    .form-group { margin-bottom: 1rem; }
+    .form-group label { display: block; margin-bottom: 0.5rem; font-weight: 600; color: var(--muted); font-size: 0.85rem; }
+    .form-group input, .form-group textarea, .form-group select { width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: 8px; font-family: inherit; font-size: 0.95rem; }
+    
+    /* Product Table */
+    .products-table-wrap { overflow-x: auto; background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem; }
+    .products-table { width: 100%; border-collapse: collapse; text-align: left; }
+    .products-table th, .products-table td { padding: 1rem; border-bottom: 1px solid var(--border); vertical-align: middle; }
+    .products-table th { font-weight: 600; color: var(--muted); font-size: 0.85rem; text-transform: uppercase; }
+    .product-img { width: 40px; height: 40px; object-fit: cover; border-radius: 6px; }
+  </style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="header-inner">
+    <div class="header-left">
+      <a href="../index.html" class="logo-wrapper">
+        <img src="../images/logo.png" alt="Handmade Heaven Logo" class="logo-img" style="height: 60px; width: auto; object-fit: contain;" />
+      </a>
+      <span style="font-weight:700; font-size:1.2rem; color:var(--primary); margin-left:10px;">Product Manager</span>
+    </div>
+  </div>
+</header>
+
+<main class="admin-container">
+  <div class="page-title">
+    <span>Manage Store Products</span>
+    <button class="btn-action btn-add" onclick="openModal()">+ Add New Product</button>
+  </div>
+  
+  <div class="products-table-wrap">
+    <table class="products-table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Image</th>
+          <th>Name</th>
+          <th>Category</th>
+          <th>Price</th>
+          <th>Stock</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="products-tbody">
+        <tr>
+          <td colspan="7" style="text-align:center;">Loading products inventory...</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</main>
+
+<!-- Product Modal -->
+<div id="product-modal" class="modal">
+  <div class="modal-content">
+    <button class="modal-close" onclick="closeModal()">&times;</button>
+    <h3 id="modal-title" style="margin-bottom:1.5rem; color:var(--ink);">Add New Product</h3>
+    
+    <form id="product-form" onsubmit="saveProduct(event)">
+      <input type="hidden" id="p-id" />
+      
+      <div class="form-group">
+        <label>Product Name *</label>
+        <input type="text" id="p-name" required />
+      </div>
+      
+      <div class="form-group">
+        <label>Description</label>
+        <textarea id="p-desc" rows="3"></textarea>
+      </div>
+      
+      <div class="form-group">
+        <label>Price (₹) *</label>
+        <input type="number" id="p-price" min="1" step="0.01" required />
+      </div>
+      
+      <div class="form-group">
+        <label>Stock Quantity *</label>
+        <input type="number" id="p-stock" min="0" required />
+      </div>
+      
+      <div class="form-group">
+        <label>Category *</label>
+        <select id="p-category" required>
+          <option value="Keychains">Keychains</option>
+          <option value="Covers">Covers</option>
+          <option value="Wall Art">Wall Art</option>
+          <option value="Cards">Cards</option>
+          <option value="Home Decor">Home Decor</option>
+          <option value="Fine Art">Fine Art</option>
+          <option value="Gifts">Gifts</option>
+        </select>
+      </div>
+      
+      <div class="form-group">
+        <label>Image Path (e.g. images/bear.jpg)</label>
+        <input type="text" id="p-image" value="images/placeholder.jpg" />
+      </div>
+      
+      <div class="form-group" style="display:flex; align-items:center; gap:0.5rem;">
+        <input type="checkbox" id="p-featured" style="width:auto;" />
+        <label for="p-featured" style="margin-bottom:0;">Mark as Featured Product</label>
+      </div>
+      
+      <button type="submit" class="btn-primary btn-block" style="margin-top:1rem;">Save Product Details</button>
+    </form>
+  </div>
+</div>
+
+<script>
+  let products = [];
+
+  async function loadProducts() {
+    try {
+      const res = await fetch('../backend/products.php?action=get&t=' + Date.now());
+      products = await res.json();
+      
+      const tbody = document.getElementById('products-tbody');
+      if (!products || products.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;">No products found in database.</td></tr>`;
+        return;
+      }
+      
+      tbody.innerHTML = products.map(p => `
+        <tr>
+          <td>${p.id}</td>
+          <td><img src="../${p.image}" alt="${p.name}" class="product-img"/></td>
+          <td style="font-weight:600; color:var(--ink);">${p.name}</td>
+          <td>${p.category}</td>
+          <td style="font-weight:600;">₹${p.price}</td>
+          <td style="color:${p.stock <= 3 ? 'var(--primary)' : 'inherit'}; font-weight:bold;">${p.stock}</td>
+          <td>
+            <div style="display:flex; gap:0.5rem;">
+              <button class="btn-action btn-edit" onclick="editProduct(${p.id})">Edit</button>
+              <button class="btn-action btn-delete" onclick="deleteProduct(${p.id})">Delete</button>
+            </div>
+          </td>
+        </tr>
+      `).join('');
+    } catch (err) {
+      document.getElementById('products-tbody').innerHTML = `<tr><td colspan="7" style="text-align:center; color:var(--primary);">Error connecting to API.</td></tr>`;
+    }
+  }
+
+  function openModal() {
+    document.getElementById('modal-title').textContent = 'Add New Product';
+    document.getElementById('product-form').reset();
+    document.getElementById('p-id').value = '';
+    document.getElementById('p-image').value = 'images/placeholder.jpg';
+    document.getElementById('product-modal').classList.add('active');
+  }
+
+  function closeModal() {
+    document.getElementById('product-modal').classList.remove('active');
+  }
+
+  function editProduct(id) {
+    const p = products.find(x => x.id === id);
+    if (!p) return;
+    
+    document.getElementById('modal-title').textContent = 'Edit Product';
+    document.getElementById('p-id').value = p.id;
+    document.getElementById('p-name').value = p.name;
+    document.getElementById('p-desc').value = p.description;
+    document.getElementById('p-price').value = p.price;
+    document.getElementById('p-stock').value = p.stock;
+    document.getElementById('p-category').value = p.category;
+    document.getElementById('p-image').value = p.image;
+    document.getElementById('p-featured').checked = p.featured;
+    
+    document.getElementById('product-modal').classList.add('active');
+  }
+
+  async function deleteProduct(id) {
+    if (!confirm('Are you sure you want to delete this product?')) return;
+    try {
+      const res = await fetch('../backend/products.php?action=delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id })
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert('Product deleted successfully.');
+        loadProducts();
+      } else {
+        alert('Error: ' + data.error);
+      }
+    } catch (err) {
+      alert('Delete failed.');
+    }
+  }
+
+  async function saveProduct(e) {
+    e.preventDefault();
+    const id = document.getElementById('p-id').value;
+    const name = document.getElementById('p-name').value;
+    const desc = document.getElementById('p-desc').value;
+    const price = document.getElementById('p-price').value;
+    const stock = document.getElementById('p-stock').value;
+    const category = document.getElementById('p-category').value;
+    const image = document.getElementById('p-image').value;
+    const featured = document.getElementById('p-featured').checked ? 1 : 0;
+    
+    const action = id ? 'edit' : 'add';
+    const payload = { name, description: desc, price, stock, category, image, featured };
+    if (id) payload.id = id;
+    
+    try {
+      const res = await fetch(`../backend/products.php?action=${action}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert('Product saved successfully.');
+        closeModal();
+        loadProducts();
+      } else {
+        alert('Error: ' + data.error);
+      }
+    } catch (err) {
+      alert('Save failed.');
+    }
+  }
+
+  loadProducts();
+</script>
+</body>
+</html>

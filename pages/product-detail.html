@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Product | Handmade Heaven</title>
+  <link rel="stylesheet" href="../css/style.css"/>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="header-inner">
+    <div class="header-left">
+      <button class="hamburger-btn" id="mobile-toggle" aria-label="Menu">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+      <a href="../index.html" class="logo-wrapper">
+          <img src="../images/logo.png" alt="Handmade Heaven Logo" class="logo-img" style="height: 60px; width: auto; object-fit: contain;" />
+        </a>
+      <nav class="main-nav">
+        <a href="../index.html">Home</a>
+        <a href="products.html">Shop</a>
+        <a href="javascript:void(0)" onclick="showCustomizeModal()">Customize</a>
+        <a href="wishlist.html" id="wish-nav" style="display:none">Wishlist</a>
+        <a href="orders.html" id="orders-nav" style="display:none">Orders</a>
+      
+        <a href="about.html" class="about-nav">About</a>
+        <a href="contact.html" class="contact-nav">Contact</a>
+      </nav>
+    </div>
+    
+    <div class="header-center">
+      <div class="nav-search" onclick="document.getElementById('nav-search-input').focus()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="cursor:pointer;" onclick="handleNavSearch('nav-search-input')"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+        <input type="text" id="nav-search-input" placeholder="Search handcrafted items..." onkeydown="if(event.key==='Enter') handleNavSearch('nav-search-input')" />
+      </div>
+    </div>
+    
+    <div class="header-right header-actions">
+      <a href="cart.html" class="cart-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
+        <span class="cart-badge">0</span>
+      </a>
+      <div id="auth-area"></div>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="product-detail-page" id="detail-root"></div>
+</main>
+
+<footer class="site-footer">
+  <div class="footer-top">
+    <div class="footer-logo-wrap"><a href="../index.html" style="text-decoration:none; display:flex; flex-direction:column; align-items:center;">
+      <div class="footer-logo-icon">
+        <img src="../images/logo.png" alt="Handmade Heaven Logo" style="height: 70px; width: auto; object-fit: contain; border-radius: 8px;" />
+      </div>
+      <h2 class="footer-brand-name">Handmade Heaven</h2>
+    </a></div>
+  </div>
+  
+  <div class="footer-main">
+    <div class="footer-col">
+      <h4>EXPLORE</h4>
+      <a href="../products.html">Shop All</a>
+      <a href="../products.html?category=Keychains">Keychains</a>
+      <a href="../products.html?category=Covers">Covers</a>
+      <a href="../products.html?category=Wall+Art">Wall Art</a>
+      <a href="../products.html">New Arrivals</a>
+    </div>
+    <div class="footer-col">
+      <h4>CUSTOMER CARE</h4>
+      <a href="#">Contact Us</a>
+      <a href="#">Shipping & Returns</a>
+      <a href="#">FAQ</a>
+      <a href="#">Size Guide</a>
+      <a href="../orders.html">Order Tracking</a>
+    </div>
+    <div class="footer-col">
+      <h4>OUR STORY</h4>
+      <a href="#">About Us</a>
+      <a href="#">Meet the Artisans</a>
+      <a href="#">Our Process</a>
+      <a href="#">Blog</a>
+      <a href="#">Press</a>
+    </div>
+    <div class="footer-col footer-col-subscribe">
+      <h4>STAY CONNECTED</h4>
+      <p>Sign up for 10% off your first order!</p>
+      <form class="subscribe-form" onsubmit="event.preventDefault(); alert('Subscribed to Newsletter!');">
+        <input type="email" placeholder="your.email@example.com" required/>
+        <button type="submit">SUBSCRIBE</button>
+      </form>
+      <div class="social-icons">
+        <a href="#" aria-label="Instagram"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg></a>
+        <a href="#" aria-label="Pinterest"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2A10 10 0 0 0 8 21.22c.4-.76.77-1.92.93-2.67l.86-3.66s-.22-.44-.22-1.09c0-1.02.59-1.78 1.33-1.78.63 0 .93.47.93 1.04 0 .63-.4 1.58-.6 2.46-.17.74.37 1.34 1.1 1.34 1.32 0 2.33-1.4 2.33-3.41 0-1.78-1.28-3.02-3.1-3.02-2.14 0-3.62 1.6-3.62 3.48 0 .63.24 1.3.54 1.67.06.07.07.13.05.2l-.17.7c-.03.1-.1.13-.2.08-1.42-.66-2.31-2.73-2.31-4.4 0-3.58 2.6-6.88 7.52-6.88 3.96 0 7.03 2.82 7.03 6.58 0 3.94-2.48 7.1-5.92 7.1-1.16 0-2.25-.6-2.62-1.32l-.71 2.7c-.26 1-.94 2.25-1.4 3.01A9.97 9.97 0 0 0 12 22a10 10 0 0 0 0-20z"/></svg></a>
+        <a href="#" aria-label="Facebook"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"></path></svg></a>
+      </div>
+    </div>
+  </div>
+  
+  <div class="footer-bottom">
+    <p>&copy; <span id="yr"></span> HAND MADE HEAVEN. All Rights Reserved. | <a href="#">Terms & Conditions</a> | <a href="#">Privacy Policy</a></p>
+    <div class="payment-icons">
+      <span class="pay-icon">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M12.5 10.2v3.8h5.4c-.7 2.3-2.6 4-5.4 4-3.3 0-6-2.7-6-6s2.7-6 6-6c1.5 0 2.9.5 3.9 1.5l2.8-2.8C17.5 3 15.1 2 12.5 2 7 2 2.5 6.5 2.5 12s4.5 10 10 10 10-4.5 10-10c0-.7-.1-1.3-.2-2H12.5z"/></svg>
+        GPay
+      </span>
+      <span class="pay-icon">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+        PhonePe
+      </span>
+      <span class="pay-icon">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12V7H5a2 2 0 0 1 2-2h14v4"></path><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"></path><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"></path></svg>
+        Paytm
+      </span>
+      <span class="pay-icon">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"></rect><line x1="2" y1="10" x2="22" y2="10"></line></svg>
+        Credit Card
+      </span>
+    </div>
+  </div>
+</footer>
+
+<script src="../js/store.js"></script>
+<script>
+  document.getElementById('yr').textContent = new Date().getFullYear();
+  renderNav();
+  const fa = document.getElementById('footer-account');
+  if (fa) {
+    fa.innerHTML = Auth.isLoggedIn()
+      ? `<a href="orders.html">My Orders</a><a href="wishlist.html">My Wishlist</a>`
+      : `<a href="login.html">Login</a><a href="signup.html">Create Account</a>`;
+  }
+
+  const id = parseInt(new URLSearchParams(window.location.search).get('id'));
+  const product = Inventory.getById(id);
+
+  if (!product) {
+    document.getElementById('detail-root').innerHTML = `<div class="empty-state"><p>Product not found.</p><a href="products.html" class="btn-primary">Back to Shop</a></div>`;
+  } else {
+    document.title = `${product.name} | Handmade Heaven`;
+    const inWish = Wishlist.has(product.id);
+    const related = Inventory.get().filter(p => p.category === product.category && p.id !== product.id).slice(0, 3);
+
+    let stockHtml = '';
+    if (product.stock > 3) stockHtml = `<span class="in-stock">✓ In stock</span>`;
+    else if (product.stock > 0) stockHtml = `<span class="low-stock-warn">⚠ Only ${product.stock} left</span>`;
+    else stockHtml = `<span class="out-stock">✗ Out of stock</span>`;
+
+    let relatedHtml = '';
+    if (related.length) {
+      relatedHtml = `
+        <section class="related-section">
+          <h2 class="section-title">More from ${product.category}</h2>
+          <div class="products-grid">
+            ${related.map(p => `
+              <div class="product-card">
+                <div class="product-img-wrap" onclick="window.location='product-detail.html?id=${p.id}'">
+                  <img src="${p.image}" alt="${p.name}" class="product-img" loading="lazy"/>
+                  <span class="product-category-tag">${p.category}</span>
+                </div>
+                <div class="product-info">
+                  ${p.stock <= 0 ? `<span class="out-stock-label">Out of Stock</span>` : (p.stock <= 3 ? `<span class="low-stock-label">Only ${p.stock} left</span>` : '')}
+                  <span class="product-name" onclick="window.location='product-detail.html?id=${p.id}'">${p.name}</span>
+                  <div class="product-footer">
+                    <span class="product-price">${fmt(p.price)}</span>
+                    <div class="product-actions">
+                      ${p.stock > 0 ? `
+                      <button class="btn-add-cart" onclick="addToCart(${p.id})">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+                      </button>` : ''}
+                    </div>
+                  </div>
+                </div>
+              </div>`).join('')}
+          </div>
+        </section>`;
+    }
+
+    document.getElementById('detail-root').innerHTML = `
+      <div class="pd-breadcrumb">
+        <a href="products.html">Shop</a> /
+        <a href="products.html?category=${encodeURIComponent(product.category)}">${product.category}</a> /
+        <span>${product.name}</span>
+      </div>
+
+      <div class="pd-layout">
+        <div class="pd-image-wrap">
+          <img src="${product.image}" alt="${product.name}" class="pd-image"/>
+          <span class="product-category-tag">${product.category}</span>
+        </div>
+        <div class="pd-info">
+          <h1 class="pd-title">${product.name}</h1>
+          <p class="pd-price">${fmt(product.price)}</p>
+          <p class="pd-desc">${product.description}</p>
+          <div class="pd-stock">${stockHtml}</div>
+
+          ${product.stock > 0 ? `
+          <div class="pd-form">
+            <div class="qty-wrap">
+              <label>Qty</label>
+              <input type="number" id="qty-input" value="1" min="1" max="${product.stock}" class="qty-input"/>
+            </div>
+            <button class="btn-primary btn-lg btn-block" onclick="addToCart()">Add to Cart</button>
+          </div>` : ''}
+
+          <button id="wish-btn" class="btn-outline btn-wishlist-lg ${inWish ? 'wishlisted' : ''}" onclick="toggleWish()">
+            <svg viewBox="0 0 24 24" fill="${inWish ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" width="18"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
+            <span id="wish-label">${inWish ? 'Saved to Wishlist' : 'Save to Wishlist'}</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Reviews Section -->
+      <section class="reviews-section" style="margin-top: 3rem; padding-top: 2rem; border-top: 1px solid var(--border);">
+        <h2 class="section-title" style="margin-bottom: 1.5rem;">Customer Reviews</h2>
+        
+        <div class="reviews-summary" style="display: flex; gap: 2rem; align-items: center; background: var(--bg-card); padding: 1.5rem; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 2rem;">
+          <div style="text-align: center;">
+            <span style="font-size: 3rem; font-weight: 700; color: var(--ink); line-height: 1;" id="avg-rating">${Reviews.getAverage(product.id)}</span>
+            <div style="color: #fbbf24; font-size: 1.2rem; margin-top: 0.5rem;" id="avg-stars">
+              ${'★'.repeat(Math.round(Reviews.getAverage(product.id)))}${'☆'.repeat(5 - Math.round(Reviews.getAverage(product.id)))}
+            </div>
+            <span style="font-size: 0.85rem; color: var(--muted); display: block; margin-top: 0.25rem;">Based on <span id="review-count">${Reviews.get(product.id).length}</span> reviews</span>
+          </div>
+          
+          <div style="flex: 1;">
+            <button class="btn-primary" onclick="toggleReviewForm()">Write a Review</button>
+          </div>
+        </div>
+
+        <!-- Write Review Form -->
+        <div id="review-form-container" style="display: none; background: var(--bg-card); padding: 1.5rem; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 2rem;">
+          <h3 style="margin-bottom: 1rem; color: var(--ink);">Write a Review</h3>
+          <form id="review-form" onsubmit="submitReview(event)">
+            <div class="form-group" style="margin-bottom: 1rem;">
+              <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: var(--muted);">Rating</label>
+              <div class="star-rating" style="display: flex; gap: 0.5rem; font-size: 1.5rem; color: #fbbf24; cursor: pointer;">
+                <span onclick="setRating(1)" class="star" id="star-1">★</span>
+                <span onclick="setRating(2)" class="star" id="star-2">★</span>
+                <span onclick="setRating(3)" class="star" id="star-3">★</span>
+                <span onclick="setRating(4)" class="star" id="star-4">★</span>
+                <span onclick="setRating(5)" class="star" id="star-5">★</span>
+              </div>
+              <input type="hidden" id="review-rating" value="5" required />
+            </div>
+            <div class="form-group" style="margin-bottom: 1rem;">
+              <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: var(--muted);">Your Review</label>
+              <textarea id="review-text" class="form-input" rows="4" placeholder="Share your thoughts about this product..." required style="width: 100%;"></textarea>
+            </div>
+            <button type="submit" class="btn-primary">Submit Review</button>
+          </form>
+        </div>
+
+        <!-- Reviews List -->
+        <div id="reviews-list" style="display: flex; flex-direction: column; gap: 1.5rem;">
+          ${Reviews.get(product.id).map(r => `
+            <div class="review-item" style="border-bottom: 1px solid var(--border); padding-bottom: 1.5rem;">
+              <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem;">
+                <div>
+                  <strong style="color: var(--ink); font-size: 1rem;">${r.name}</strong>
+                  <div style="color: #fbbf24; font-size: 0.9rem; margin-top: 0.25rem;">
+                    ${'★'.repeat(r.rating)}${'☆'.repeat(5 - r.rating)}
+                  </div>
+                </div>
+                <span style="font-size: 0.82rem; color: var(--muted);">${r.date}</span>
+              </div>
+              <p style="color: var(--ink-light); font-size: 0.95rem; line-height: 1.6;">${r.text}</p>
+            </div>
+          `).join('')}
+        </div>
+      </section>
+
+      ${relatedHtml}`;
+  }
+
+  function addToCart(addId) {
+    let targetId = product.id;
+    let qty = 1;
+    if (addId) {
+      targetId = addId;
+    } else {
+      const qtyEl = document.getElementById('qty-input');
+      if (qtyEl) qty = parseInt(qtyEl.value) || 1;
+    }
+    
+    const p = Inventory.getById(targetId);
+    if (!p || p.stock <= 0) {
+      showFlash('Sorry, this item is out of stock.', 'error');
+      return;
+    }
+    if (qty > p.stock) {
+      showFlash(`Only ${p.stock} units available.`, 'error');
+      return;
+    }
+
+    Cart.add(targetId, qty);
+    updateNavCart();
+    showFlash('Added to cart!');
+  }
+
+  function toggleWish() {
+    if (!Auth.isLoggedIn()) { window.location.href = 'login.html'; return; }
+    const state = Wishlist.toggle(product.id);
+    const btn = document.getElementById('wish-btn');
+    btn.classList.toggle('wishlisted', state);
+    btn.querySelector('svg').setAttribute('fill', state ? 'currentColor' : 'none');
+    document.getElementById('wish-label').textContent = state ? 'Saved to Wishlist' : 'Save to Wishlist';
+  }
+
+  window.toggleReviewForm = function() {
+    if (!Auth.isLoggedIn()) { window.location.href = 'login.html?next=' + encodeURIComponent(window.location.search); return; }
+    const form = document.getElementById('review-form-container');
+    form.style.display = form.style.display === 'none' ? 'block' : 'none';
+  };
+
+  window.setRating = function(rating) {
+    document.getElementById('review-rating').value = rating;
+    for (let i = 1; i <= 5; i++) {
+      const star = document.getElementById(`star-${i}`);
+      if (i <= rating) {
+        star.style.color = '#fbbf24';
+      } else {
+        star.style.color = '#d1d5db';
+      }
+    }
+  };
+
+  window.submitReview = function(e) {
+    e.preventDefault();
+    const rating = document.getElementById('review-rating').value;
+    const text = document.getElementById('review-text').value;
+    
+    Reviews.add(product.id, rating, text);
+    
+    const reviewsList = document.getElementById('reviews-list');
+    const reviews = Reviews.get(product.id);
+    reviewsList.innerHTML = reviews.map(r => `
+      <div class="review-item" style="border-bottom: 1px solid var(--border); padding-bottom: 1.5rem;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem;">
+          <div>
+            <strong style="color: var(--ink); font-size: 1rem;">${r.name}</strong>
+            <div style="color: #fbbf24; font-size: 0.9rem; margin-top: 0.25rem;">
+              ${'★'.repeat(r.rating)}${'☆'.repeat(5 - r.rating)}
+            </div>
+          </div>
+          <span style="font-size: 0.82rem; color: var(--muted);">${r.date}</span>
+        </div>
+        <p style="color: var(--ink-light); font-size: 0.95rem; line-height: 1.6;">${r.text}</p>
+      </div>
+    `).join('');
+    
+    document.getElementById('avg-rating').textContent = Reviews.getAverage(product.id);
+    document.getElementById('review-count').textContent = reviews.length;
+    document.getElementById('avg-stars').innerHTML = '★'.repeat(Math.round(Reviews.getAverage(product.id))) + '☆'.repeat(5 - Math.round(Reviews.getAverage(product.id)));
+    
+    document.getElementById('review-text').value = '';
+    document.getElementById('review-form-container').style.display = 'none';
+    showFlash('Review submitted successfully!');
+  };
+</script>
+</body>
+</html>
+
+
+
+
+
+

@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Handmade Heaven | Crafted with Love</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+
+<body>
+
+  <header class="site-header">
+    <div class="header-inner">
+      <div class="header-left">
+        <button class="hamburger-btn" id="mobile-toggle" aria-label="Menu">
+          <span></span>
+          <span></span>
+          <span></span>
+        </button>
+        <a href="index.html" class="logo-wrapper">
+          <img src="images/logo.png" alt="Handmade Heaven Logo" class="logo-img" style="height: 60px; width: auto; object-fit: contain;" />
+        </a>
+        <nav class="main-nav">
+          <a href="index.html" class="active">Home</a>
+          <a href="pages/products.html">Shop</a>
+          <a href="javascript:void(0)" onclick="showCustomizeModal()">Customize</a>
+          <a href="pages/wishlist.html" id="wish-nav" style="display:none">Wishlist</a>
+          <a href="pages/orders.html" id="orders-nav" style="display:none">Orders</a>
+          <a href="pages/about.html">About</a>
+          <a href="pages/contact.html">Contact</a>
+        </nav>
+      </div>
+
+      <div class="header-center">
+        <div class="nav-search" onclick="document.getElementById('nav-search-input').focus()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="cursor:pointer;" onclick="handleNavSearch('nav-search-input')">
+            <circle cx="11" cy="11" r="8" />
+            <path d="M21 21l-4.35-4.35" />
+          </svg>
+          <input type="text" id="nav-search-input" placeholder="Search handcrafted items..."
+            onkeydown="if(event.key==='Enter') handleNavSearch('nav-search-input')" />
+        </div>
+      </div>
+
+      <div class="header-right header-actions">
+        <a href="pages/cart.html" class="cart-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" />
+            <line x1="3" y1="6" x2="21" y2="6" />
+            <path d="M16 10a4 4 0 01-8 0" />
+          </svg>
+          <span class="cart-badge">0</span>
+        </a>
+        <div id="auth-area"></div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <!-- Hero -->
+    <section class="hero">
+      <div class="hero-text">
+        <p class="hero-eyebrow">UNIQUELY HANDCRAFTED</p>
+        <h1 class="hero-title">Crafted with Love, Designed for Life.</em></h1>
+        <p class="hero-sub">Explore handmade products crafted with passion — perfect for gifting and personal style</p>
+        <div class="hero-ctas">
+          <a href="pages/products.html" class="btn-primary btn-lg">Shop Collection</a>
+        </div>
+      </div>
+      <div class="hero-visual">
+        <div class="hero-img-grid">
+          <img src="./images/home_0.avif" alt="Wall art" class="hero-img hi-1" />
+          <img src="./images/home_1.avif" alt="Keychains" class="hero-img hi-2" />
+          <img src="images/home_2.avif" alt="Covers" class="hero-img hi-3" />
+        </div>
+      </div>
+    </section>
+
+    <!-- Category pills -->
+    <div class="categories-strip">
+      <a href="pages/products.html?category=Keychains" class="cat-pill">🧸 Keychains</a>
+      <a href="pages/products.html?category=Covers" class="cat-pill">📖 Covers</a>
+      <a href="pages/products.html?category=Wall+Art" class="cat-pill">🖼 Wall Art</a>
+      <a href="pages/products.html" class="cat-pill cat-all">View All →</a>
+    </div>
+
+    <!-- Featured -->
+    <section class="section">
+      <div class="section-header">
+        <h2 class="section-title">Featured Pieces</h2>
+        <a href="pages/products.html" class="section-link">See all →</a>
+      </div>
+      <div class="products-grid" id="featured-grid"></div>
+    </section>
+
+    <!-- Value props -->
+    <section class="value-props">
+      <div class="vp-item">
+        <div class="vp-icon">✦</div>
+        <h3>Truly Handmade</h3>
+        <p>Every item is crafted by hand — no mass production, ever.</p>
+      </div>
+      <div class="vp-item">
+        <div class="vp-icon">✦</div>
+        <h3>Unique Pieces</h3>
+        <p>Limited runs mean you'll rarely see someone with the same piece.</p>
+      </div>
+      <div class="vp-item">
+        <div class="vp-icon">✦</div>
+        <h3>Ethical Materials</h3>
+        <p>Natural, sustainably sourced materials wherever possible.</p>
+      </div>
+      <div class="vp-item">
+        <div class="vp-icon">✦</div>
+        <h3>Free Delivery</h3>
+        <p>On all orders over &#8377;99.</p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="footer-top">
+      <div class="footer-logo-wrap"><a href="index.html" style="text-decoration:none; display:flex; flex-direction:column; align-items:center;">
+        <div class="footer-logo-icon">
+        <img src="images/logo.png" alt="Handmade Heaven Logo" style="height: 70px; width: auto; object-fit: contain; border-radius: 8px;" />
+      </div>
+        <h2 class="footer-brand-name">Handmade Heaven</h2>
+      </a></div>
+    </div>
+
+    <div class="footer-main">
+      <div class="footer-col">
+        <h4>EXPLORE</h4>
+        <a href="pages/products.html">Shop All</a>
+        <a href="pages/products.html?category=Keychains">Keychains</a>
+        <a href="pages/products.html?category=Covers">Covers</a>
+        <a href="pages/products.html?category=Wall+Art">Wall Art</a>
+        <a href="pages/products.html">New Arrivals</a>
+      </div>
+      <div class="footer-col">
+        <h4>CUSTOMER CARE</h4>
+        <a href="#">Contact Us</a>
+        <a href="#">Shipping & Returns</a>
+        <a href="#">FAQ</a>
+        <a href="#">Size Guide</a>
+        <a href="pages/orders.html">Order Tracking</a>
+      </div>
+      <div class="footer-col">
+        <h4>OUR STORY</h4>
+        <a href="#">About Us</a>
+        <a href="#">Meet the Artisans</a>
+        <a href="#">Our Process</a>
+        <a href="#">Blog</a>
+        <a href="#">Press</a>
+      </div>
+      <div class="footer-col footer-col-subscribe">
+        <h4>STAY CONNECTED</h4>
+        <p>Sign up for 10% off your first order!</p>
+        <form class="subscribe-form" onsubmit="event.preventDefault(); alert('Subscribed to Newsletter!');">
+          <input type="email" placeholder="your.email@example.com" required />
+          <button type="submit">SUBSCRIBE</button>
+        </form>
+        <div class="social-icons">
+          <a href="#" aria-label="Instagram"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              stroke-width="2">
+              <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
+              <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
+              <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line>
+            </svg></a>
+          <a href="#" aria-label="Pinterest"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              stroke-width="2">
+              <path
+                d="M12 2A10 10 0 0 0 8 21.22c.4-.76.77-1.92.93-2.67l.86-3.66s-.22-.44-.22-1.09c0-1.02.59-1.78 1.33-1.78.63 0 .93.47.93 1.04 0 .63-.4 1.58-.6 2.46-.17.74.37 1.34 1.1 1.34 1.32 0 2.33-1.4 2.33-3.41 0-1.78-1.28-3.02-3.1-3.02-2.14 0-3.62 1.6-3.62 3.48 0 .63.24 1.3.54 1.67.06.07.07.13.05.2l-.17.7c-.03.1-.1.13-.2.08-1.42-.66-2.31-2.73-2.31-4.4 0-3.58 2.6-6.88 7.52-6.88 3.96 0 7.03 2.82 7.03 6.58 0 3.94-2.48 7.1-5.92 7.1-1.16 0-2.25-.6-2.62-1.32l-.71 2.7c-.26 1-.94 2.25-1.4 3.01A9.97 9.97 0 0 0 12 22a10 10 0 0 0 0-20z" />
+            </svg></a>
+          <a href="#" aria-label="Facebook"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"></path>
+            </svg></a>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer-bottom">
+      <p>&copy; <span id="yr"></span> HAND MADE HEAVEN. All Rights Reserved. | <a href="#">Terms & Conditions</a> | <a
+          href="#">Privacy Policy</a></p>
+      <div class="payment-icons">
+        <span class="pay-icon">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+            <path
+              d="M12.5 10.2v3.8h5.4c-.7 2.3-2.6 4-5.4 4-3.3 0-6-2.7-6-6s2.7-6 6-6c1.5 0 2.9.5 3.9 1.5l2.8-2.8C17.5 3 15.1 2 12.5 2 7 2 2.5 6.5 2.5 12s4.5 10 10 10 10-4.5 10-10c0-.7-.1-1.3-.2-2H12.5z" />
+          </svg>
+          GPay
+        </span>
+        <span class="pay-icon">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+            <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+          </svg>
+          PhonePe
+        </span>
+        <span class="pay-icon">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 12V7H5a2 2 0 0 1 2-2h14v4"></path>
+            <path d="M3 5v14a2 2 0 0 0 2 2h16v-5"></path>
+            <path d="M18 12a2 2 0 0 0 0 4h4v-4Z"></path>
+          </svg>
+          Paytm
+        </span>
+        <span class="pay-icon">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="2" y="5" width="20" height="14" rx="2"></rect>
+            <line x1="2" y1="10" x2="22" y2="10"></line>
+          </svg>
+          Credit Card
+        </span>
+      </div>
+    </div>
+  </footer>
+
+  <script src="js/store.js"></script>
+  <script>
+    document.getElementById('yr').textContent = new Date().getFullYear();
+    renderNav();
+
+    // Footer account links
+    const fa = document.getElementById('footer-account');
+    if (fa) {
+      if (Auth.isLoggedIn()) {
+        fa.innerHTML = `<a href="pages/orders.html">My Orders</a><a href="pages/wishlist.html">My Wishlist</a>`;
+      } else {
+        fa.innerHTML = `<a href="pages/login.html">Login</a><a href="pages/signup.html">Create Account</a>`;
+      }
+    }
+
+    // Featured products
+    const featured = Inventory.get().filter(p => p.featured);
+    const grid = document.getElementById('featured-grid');
+    grid.innerHTML = featured.map(p => productCard(p)).join('');
+
+    function productCard(p) {
+      const wishlisted = Wishlist.has(p.id);
+      return `
+      <div class="product-card ${p.stock <= 0 ? 'out-of-stock' : ''}">
+        <div class="product-img-wrap" onclick="window.location='pages/product-detail.html?id=${p.id}'">
+          <img src="${p.image.replace('../', '')}" alt="${p.name}" class="product-img" loading="lazy"/>
+          <span class="product-category-tag">${p.category}</span>
+        </div>
+        <div class="product-info">
+          ${p.stock <= 0 ? `<span class="out-stock-label">Out of Stock</span>` : (p.stock <= 3 ? `<span class="low-stock-label">Only ${p.stock} left</span>` : '')}
+          <span class="product-name" onclick="window.location='pages/product-detail.html?id=${p.id}'">${p.name}</span>
+          <div class="product-footer">
+            <span class="product-price">${fmt(p.price)}</span>
+            <div class="product-actions">
+              <button class="btn-wishlist ${wishlisted ? 'wishlisted' : ''}" onclick="toggleWish(${p.id}, this)">
+                <svg viewBox="0 0 24 24" fill="${wishlisted ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
+              </button>
+              ${p.stock > 0 ? `
+              <button class="btn-add-cart" onclick="addToCart(${p.id})">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+              </button>` : ''}
+            </div>
+          </div>
+        </div>
+      </div>`;
+    }
+
+    function addToCart(id) {
+      Cart.add(id, 1);
+      updateNavCart();
+      showFlash('Added to cart!');
+    }
+
+    function toggleWish(id, btn) {
+      if (!Auth.isLoggedIn()) { window.location.href = 'pages/login.html'; return; }
+      const state = Wishlist.toggle(id);
+      btn.classList.toggle('wishlisted', state);
+      btn.querySelector('svg').setAttribute('fill', state ? 'currentColor' : 'none');
+    }
+
+  </script>
+</body>
+
+</html>
+
+
+
+
