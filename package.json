@@ -1,0 +1,23 @@
+{
+  "name": "handmade-heaven",
+  "version": "1.0.0",
+  "description": "",
+  "homepage": "https://github.com/rohansharma0481-pixel/handmade-heaven#readme",
+  "bugs": {
+    "url": "https://github.com/rohansharma0481-pixel/handmade-heaven/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rohansharma0481-pixel/handmade-heaven.git"
+  },
+  "license": "ISC",
+  "author": "",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "express": "^5.2.1"
+  }
+}
