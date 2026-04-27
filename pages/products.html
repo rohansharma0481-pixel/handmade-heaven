@@ -152,7 +152,7 @@
   </div>
 </footer>
 
-<script src="../js/store.js"></script>
+<script src="../js/store.js?v=3"></script>
 <script>
   document.getElementById('yr').textContent = new Date().getFullYear();
   renderNav();
@@ -206,18 +206,33 @@
     if (cat) list = list.filter(p => p.category === cat);
     if (q) {
       const normalizedQ = q.replace(/\s+/g, '').toLowerCase();
+      const stemmedQ = normalizedQ.endsWith('s') ? normalizedQ.slice(0, -1) : normalizedQ;
+      
       list = list.filter(p => {
         const name = p.name.toLowerCase();
         const desc = p.description.toLowerCase();
+        const cat = p.category ? p.category.toLowerCase() : '';
+        
         const normName = p.name.replace(/\s+/g, '').toLowerCase();
         const normDesc = p.description.replace(/\s+/g, '').toLowerCase();
+        const normCat = p.category ? p.category.replace(/\s+/g, '').toLowerCase() : '';
+        
+        const stemmedName = normName.endsWith('s') ? normName.slice(0, -1) : normName;
+        const stemmedDesc = normDesc.endsWith('s') ? normDesc.slice(0, -1) : normDesc;
+        const stemmedCat = normCat.endsWith('s') ? normCat.slice(0, -1) : normCat;
         
         return name.includes(q) || 
                desc.includes(q) || 
+               cat.includes(q) ||
                normName.includes(normalizedQ) || 
                normDesc.includes(normalizedQ) || 
+               normCat.includes(normalizedQ) ||
+               stemmedName.includes(stemmedQ) ||
+               stemmedDesc.includes(stemmedQ) ||
+               stemmedCat.includes(stemmedQ) ||
                q.includes(name) || 
-               normalizedQ.includes(normName);
+               normalizedQ.includes(normName) ||
+               stemmedQ.includes(stemmedName);
       });
     }
     if (sort === 'price_asc') list.sort((a, b) => a.price - b.price);

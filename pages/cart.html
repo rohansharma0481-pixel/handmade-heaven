@@ -239,7 +239,7 @@
   </div>
 </footer>
 
-<script src="../js/store.js"></script>
+<script src="../js/store.js?v=3"></script>
 <script>
   document.getElementById('yr').textContent = new Date().getFullYear();
   renderNav();
@@ -378,7 +378,12 @@
                 <div class="pc-expanded" id="details-UPI">
                   <div style="text-align:center;">
                     <p style="margin-bottom: 0.5rem; font-weight: 500;">Scan to Pay: ${fmt(grandTotal)}</p>
-                    <img src="https://chart.googleapis.com/chart?chs=200x200&cht=qr&chl=upi://pay?pa=store@upi%26pn=HandmadeHeaven%26am=${grandTotal}" alt="UPI QR Code" style="max-width:200px; width:100%; height:auto; display:inline-block;" />
+                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=upi://pay?pa=store@upi%26pn=HandmadeHeaven%26am=${grandTotal}" alt="UPI QR Code" style="max-width:180px; width:100%; height:auto; display:inline-block; border-radius:8px; border:1px solid #e5e7eb;" />
+                    <div style="margin-top: 1rem; text-align: left;">
+                      <label style="display:block; margin-bottom:0.4rem; font-size:0.85rem; font-weight:600; color:var(--ink);">Enter UPI Transaction ID (UTR) *</label>
+                      <input type="text" id="cart-upi-utr" class="form-input" placeholder="12-digit UTR Number" maxlength="12" oninput="validateCartUTR()" />
+                      <span id="cart-utr-err" style="font-size:.75rem;color:#dc2626;display:none;margin-top:.3rem;">⚠️ Enter a valid 12-digit numeric UTR.</span>
+                    </div>
                   </div>
                 </div>
               </label>
@@ -433,6 +438,7 @@
       </div>
     `;
     document.body.appendChild(overlay);
+    selectPayment('COD');
   }
 
   window.selectPayment = function(method) {
@@ -440,7 +446,28 @@
     const allExpanded = document.querySelectorAll('.pc-expanded');
     allExpanded.forEach(el => el.style.display = 'none');
     document.getElementById('details-' + method).style.display = 'block';
+    validateCartUTR();
   };
+
+  window.validateCartUTR = function() {
+    const isUPI = document.getElementById('pay-UPI').checked;
+    const submitBtn = document.getElementById('place-order-btn');
+    if (!isUPI) {
+      if (submitBtn) submitBtn.disabled = false;
+      return;
+    }
+    const utr = document.getElementById('cart-upi-utr').value;
+    const isValid = /^\d{12}$/.test(utr);
+
+    if (utr.length > 0 && !/^\d+$/.test(utr)) {
+      document.getElementById('cart-upi-utr').value = utr.replace(/[^\d]/g, '');
+    }
+
+    if (submitBtn) {
+      submitBtn.disabled = !isValid;
+    }
+  };
+
 
   // ── Input Validation Helpers ─────────────────────────────
   window.onlyDigits = function(input, errId) {
@@ -507,7 +534,7 @@
 
 
 
-  window.submitOrder = function(e) {
+  window.submitOrder = async function(e) {
     e.preventDefault();
     const phone = document.getElementById('checkout-phone').value;
     const house = document.getElementById('checkout-addr-house').value;
@@ -516,9 +543,23 @@
     const state = document.getElementById('checkout-addr-state').value;
     const pin = document.getElementById('checkout-addr-pin').value;
     const address = `${house}, ${street}, ${city}, ${state} - ${pin}`;
-    const paymentMethod = document.querySelector('input[name="payment"]:checked').value;
+    const selectedPayment = document.querySelector('input[name="payment"]:checked');
+    if (!selectedPayment) {
+        showFlash('Please select a payment method.', 'error');
+        return;
+    }
+    let paymentMethod = selectedPayment.value;
+    if (paymentMethod === 'UPI') {
+      const utr = document.getElementById('cart-upi-utr').value;
+      if (!/^\d{12}$/.test(utr)) {
+        showFlash('Please enter a valid 12-digit UTR number.', 'error');
+        return;
+      }
+      paymentMethod = `UPI (UTR: ${utr})`;
+    }
     const details = { phone, address, paymentMethod };
-    const order = Orders.place(details);
+
+    const order = await Orders.place(details);
     if (order && order.error) {
       showFlash(order.error, 'error');
       return;

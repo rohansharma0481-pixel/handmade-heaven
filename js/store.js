@@ -339,13 +339,20 @@ const API_PREFIX = window.location.pathname.includes('/pages/') ? '../backend/' 
 function apiCall(endpoint, method = 'GET', data = null) {
     const xhr = new XMLHttpRequest();
     const url = API_PREFIX + endpoint + (endpoint.includes('?') ? '&' : '?') + 't=' + Date.now();
+    console.log("API CALL:", method, url, data);
     xhr.open(method, url, false); // synchronous
-    if (method === 'POST' && data) {
-        xhr.setRequestHeader('Content-Type', 'application/json');
-        xhr.send(JSON.stringify(data));
-    } else {
-        xhr.send();
+    try {
+        if (method === 'POST' && data) {
+            xhr.setRequestHeader('Content-Type', 'application/json');
+            xhr.send(JSON.stringify(data));
+        } else {
+            xhr.send();
+        }
+    } catch (e) {
+        console.error("XHR Send Exception:", e);
+        return { error: 'XHR Exception: ' + e.message };
     }
+    console.log("API RESP:", xhr.status, xhr.responseText);
     if (xhr.status >= 200 && xhr.status < 300) {
         return JSON.parse(xhr.responseText);
     }
@@ -355,46 +362,46 @@ function apiCall(endpoint, method = 'GET', data = null) {
 // ── Inventory ───────────────────────────────────────────────
 const Inventory = {
   get() {
-    console.log('Inventory.get() called. API_PREFIX:', API_PREFIX);
-    const products = apiCall('products.php');
-    console.log('Products API response:', products);
-    if (products.error) {
-        console.error('API Error in Inventory.get:', products.error);
-        return [];
+    let local = JSON.parse(localStorage.getItem('ac_products'));
+    if (!local || !local.length) {
+       local = PRODUCTS;
+       localStorage.setItem('ac_products', JSON.stringify(local));
     }
-    
     const isPages = window.location.pathname.includes('/pages/');
-    products.forEach(p => {
-        p.image = (isPages ? '../' : '') + p.image;
-    });
-    console.log('Processed products:', products);
-    return products;
+    return local.map(p => ({
+        ...p,
+        image: (isPages ? '../' : '') + p.image.replace('../', '')
+    }));
   },
   getById(id) {
-    const product = apiCall('products.php?id=' + id);
-    if (product.error) return null;
-    
-    const isPages = window.location.pathname.includes('/pages/');
-    product.image = (isPages ? '../' : '') + product.image;
-    return product;
+    return this.get().find(p => p.id === parseInt(id));
   },
   updateStock(productId, qtyToDeduct) {
-    // Handled securely on backend during order placement
+    let local = JSON.parse(localStorage.getItem('ac_products')) || PRODUCTS;
+    const prod = local.find(p => p.id === parseInt(productId));
+    if (prod) {
+        prod.stock = Math.max(0, prod.stock - qtyToDeduct);
+        localStorage.setItem('ac_products', JSON.stringify(local));
+    }
   }
 };
 
 // ── Auth ────────────────────────────────────────────────────
 const Auth = {
   signup(name, email, password) {
-    const res = apiCall('auth.php?action=signup', 'POST', { name, email, password });
-    if (res.error) return res;
-    this.setSession(res.user);
+    let users = JSON.parse(localStorage.getItem('ac_users') || '[]');
+    if (users.find(u => u.email === email)) return { error: 'Email already exists' };
+    const user = { id: Date.now(), name, email, password };
+    users.push(user);
+    localStorage.setItem('ac_users', JSON.stringify(users));
+    this.setSession(user);
     return { success: true };
   },
   login(email, password) {
-    const res = apiCall('auth.php?action=login', 'POST', { email, password });
-    if (res.error) return res;
-    this.setSession(res.user);
+    let users = JSON.parse(localStorage.getItem('ac_users') || '[]');
+    const user = users.find(u => u.email === email && u.password === password);
+    if (!user) return { error: 'Invalid email or password' };
+    this.setSession(user);
     return { success: true };
   },
   getSession() {
@@ -505,33 +512,50 @@ const Wishlist = {
 
 // ── Orders ───────────────────────────────────────────────────
 const Orders = {
-  get() {
+  async get() {
     const user = Auth.currentUser();
     if (!user) return [];
-    const orders = apiCall('orders.php?userId=' + user.id);
-    if (orders.error) return [];
     
-    orders.forEach(o => {
-        o.id = parseInt(o.id);
-        o.total = parseFloat(o.total);
-        o.customer = {
-            name: user.name,
-            email: user.email,
-            phone: o.phone,
-            address: o.address,
-            paymentMethod: o.payment_method
-        };
-        o.previewImage = o.preview_image;
-        o.customText = o.custom_text;
-        o.customImage = o.custom_image;
-        o.items.forEach(item => {
-            const isPages = window.location.pathname.includes('/pages/');
-            item.image = (isPages ? '../' : '') + item.image;
-        });
-    });
-    return orders;
+    try {
+        const url = API_PREFIX + 'orders.php?action=get&userId=' + user.id + '&email=' + encodeURIComponent(user.email) + '&t=' + Date.now();
+        const response = await fetch(url);
+        const resUser = await response.json();
+        if (resUser && !resUser.error && Array.isArray(resUser)) {
+            return resUser.map(o => ({
+                id: parseInt(o.id),
+                user_id: parseInt(o.user_id),
+                date: o.date,
+                status: o.status || 'pending_approval',
+                total: parseFloat(o.total),
+                extraCharge: parseFloat(o.extra_charge || 0),
+                revisionNote: o.revision_note,
+                previewImage: o.preview_image,
+                customText: o.custom_text,
+                customImage: o.custom_image,
+                customer: {
+                    name: user.name,
+                    email: user.email,
+                    phone: o.phone,
+                    address: o.address,
+                    paymentMethod: o.payment_method
+                },
+                items: (o.items || []).map(i => ({
+                    productId: parseInt(i.product_id),
+                    name: i.name,
+                    image: i.image ? (i.image.startsWith('../') ? i.image : '../' + i.image) : '../images/bear.jpg',
+                    qty: parseInt(i.qty),
+                    price: parseFloat(i.price)
+                }))
+            }));
+        }
+    } catch (e) {
+        console.error("Backend fetch failed:", e);
+    }
+    
+    let orders = JSON.parse(localStorage.getItem('ac_orders') || '[]');
+    return orders.filter(o => o.user_id === user.id);
   },
-  place(details = {}) {
+  async place(details = {}) {
     const items = Cart.getWithProducts();
     if (!items.length) return null;
 
@@ -541,60 +565,161 @@ const Orders = {
     const orderData = {
         id: Date.now(),
         user_id: user.id,
+        date: new Date().toISOString().split('T')[0],
+        status: 'pending_approval',
         total: Cart.total(),
-        phone: details.phone || '',
-        address: details.address || '',
-        paymentMethod: details.paymentMethod || 'COD',
+        customer: {
+            name: user.name,
+            email: user.email,
+            phone: details.phone || '',
+            address: details.address || '',
+            paymentMethod: details.paymentMethod || 'COD'
+        },
         items: items.map(i => ({
             productId: i.productId,
+            name: i.product.name,
+            image: i.product.image,
             qty: i.qty,
             price: i.product.price
         }))
     };
 
-    const res = apiCall('orders.php?action=place', 'POST', orderData);
-    if (res.error) return res;
+    let orders = JSON.parse(localStorage.getItem('ac_orders') || '[]');
+    orders.push(orderData);
+    localStorage.setItem('ac_orders', JSON.stringify(orders));
 
+    try {
+        const backendData = {
+            id: orderData.id,
+            user_id: user.id,
+            total: orderData.total,
+            phone: details.phone || '',
+            address: details.address || '',
+            paymentMethod: details.paymentMethod || 'COD',
+            email: user.email,
+            name: user.name,
+            items: items.map(i => ({
+                productId: i.productId,
+                qty: i.qty,
+                price: i.product.price
+            }))
+        };
+        const url = API_PREFIX + 'orders.php?action=place&t=' + Date.now();
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(backendData)
+        });
+        const res = await response.json();
+        if (res && res.error) {
+            return { error: "Backend error: " + res.error };
+        }
+    } catch (e) {
+        console.error("Backend order sync failed:", e);
+        return { error: "Failed to sync order with backend server." };
+    }
+
+    items.forEach(i => Inventory.updateStock(i.productId, i.qty));
     Cart.clear();
     return { id: orderData.id };
   },
-  getById(id) {
-    return this.get().find((o) => o.id === id);
+  async getById(id) {
+    const user = Auth.currentUser();
+    if (user) {
+        try {
+            const url = API_PREFIX + 'orders.php?action=get&userId=' + user.id + '&email=' + encodeURIComponent(user.email) + '&t=' + Date.now();
+            const response = await fetch(url);
+            const resUser = await response.json();
+            if (resUser && !resUser.error && Array.isArray(resUser)) {
+                const o = resUser.find(ord => parseInt(ord.id) === parseInt(id));
+                if (o) {
+                    return {
+                        id: parseInt(o.id),
+                        user_id: parseInt(o.user_id),
+                        date: o.date,
+                        status: o.status || 'pending_approval',
+                        total: parseFloat(o.total),
+                        extraCharge: parseFloat(o.extra_charge || 0),
+                        revisionNote: o.revision_note,
+                        previewImage: o.preview_image,
+                        customText: o.custom_text,
+                        customImage: o.custom_image,
+                        customer: {
+                            name: user.name,
+                            email: user.email,
+                            phone: o.phone,
+                            address: o.address,
+                            paymentMethod: o.payment_method
+                        },
+                        items: (o.items || []).map(i => ({
+                            productId: parseInt(i.product_id),
+                            name: i.name,
+                            image: i.image ? (i.image.startsWith('../') ? i.image : '../' + i.image) : '../images/bear.jpg',
+                            qty: parseInt(i.qty),
+                            price: parseFloat(i.price)
+                        }))
+                    };
+                }
+            }
+        } catch(e) { console.error('getById fetch failed:', e); }
+    }
+    let orders = JSON.parse(localStorage.getItem('ac_orders') || '[]');
+    return orders.find(o => o.id === parseInt(id));
   },
-  updatePreview(orderId, imgUrl) {
-    const res = apiCall('orders.php?action=updatePreview', 'POST', { orderId, previewImage: imgUrl });
-    return res;
+  async updatePreview(orderId, imgUrl) {
+    let orders = JSON.parse(localStorage.getItem('ac_orders') || '[]');
+    const o = orders.find(o => o.id === parseInt(orderId));
+    if (o) { o.previewImage = imgUrl; o.status = 'pending_approval'; localStorage.setItem('ac_orders', JSON.stringify(orders)); }
+    try {
+        const url = API_PREFIX + 'orders.php?action=updatePreview';
+        await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ orderId, previewImage: imgUrl }) });
+    } catch(e) { console.error('updatePreview failed:', e); }
+    return { success: true };
   },
-  confirmAndPay(orderId, paymentMethod) {
-    const res = apiCall('orders.php?action=confirmAndPay', 'POST', { orderId, status: 'Processing', paymentMethod });
-    return res;
+  async confirmAndPay(orderId, paymentMethod) {
+    let orders = JSON.parse(localStorage.getItem('ac_orders') || '[]');
+    const o = orders.find(o => o.id === parseInt(orderId));
+    if (o) { o.status = 'Processing'; if (o.customer) o.customer.paymentMethod = paymentMethod; localStorage.setItem('ac_orders', JSON.stringify(orders)); }
+    try {
+        const url = API_PREFIX + 'orders.php?action=confirmAndPay';
+        await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ orderId, status: 'Processing', paymentMethod }) });
+    } catch(e) { console.error('confirmAndPay failed:', e); }
+    return { success: true };
   },
-  updateStatus(orderId, status) {
-    const res = apiCall('orders.php?action=updateStatus', 'POST', { orderId, status });
-    return res;
+  async updateStatus(orderId, status, revisionNote = null) {
+    let orders = JSON.parse(localStorage.getItem('ac_orders') || '[]');
+    const o = orders.find(o => o.id === parseInt(orderId));
+    if (o) { o.status = status; if (revisionNote) o.revisionNote = revisionNote; localStorage.setItem('ac_orders', JSON.stringify(orders)); }
+    try {
+        const url = API_PREFIX + 'orders.php?action=updateStatus';
+        const body = { orderId, status };
+        if (revisionNote !== null) body.revisionNote = revisionNote;
+        await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    } catch(e) { console.error('updateStatus failed:', e); }
+    return { success: true };
   }
 };
 
 // ── Reviews ──────────────────────────────────────────────────
 const Reviews = {
   get(productId) {
-    const reviews = apiCall('reviews.php?productId=' + productId);
-    if (reviews.error) return [
-      { id: 1, name: "Aarav Sharma", rating: 5, text: "Absolutely loved the quality! Highly recommend.", date: "2026-04-10" },
-      { id: 2, name: "Sneha Patel", rating: 4, text: "Very pretty, but delivery took a day extra.", date: "2026-04-15" }
-    ];
-    return reviews;
+    let reviews = JSON.parse(localStorage.getItem('ac_reviews') || '[]');
+    let prodReviews = reviews.filter(r => r.productId === parseInt(productId));
+    if (!prodReviews.length) {
+        return [
+          { id: 1, name: "Aarav Sharma", rating: 5, text: "Absolutely loved the quality! Highly recommend.", date: "2026-04-10" },
+          { id: 2, name: "Sneha Patel", rating: 4, text: "Very pretty, but delivery took a day extra.", date: "2026-04-15" }
+        ];
+    }
+    return prodReviews;
   },
   add(productId, rating, text) {
     const user = Auth.currentUser() || { name: "Guest" };
-    const res = apiCall('reviews.php?action=add', 'POST', {
-        productId,
-        name: user.name,
-        rating,
-        text
-    });
-    if (res.error) return null;
-    return res.review;
+    let reviews = JSON.parse(localStorage.getItem('ac_reviews') || '[]');
+    const review = { id: Date.now(), productId: parseInt(productId), name: user.name, rating: parseInt(rating), text, date: new Date().toISOString().split('T')[0] };
+    reviews.push(review);
+    localStorage.setItem('ac_reviews', JSON.stringify(reviews));
+    return review;
   },
   getAverage(productId) {
     const reviews = this.get(productId);
@@ -712,7 +837,24 @@ function showCustomizeModal() {
   const CUSTOM_CHARGE = 200;
 
   const modalHTML = `
+    <style>
+      #customize-modal .payment-list { border: 1px solid #e5e7eb; border-radius: 8px; background: #fff; overflow: hidden; margin-top: 0.5rem; }
+      #customize-modal .payment-card { display: block; border-bottom: 1px solid #e5e7eb; cursor: pointer; transition: background 0.2s; }
+      #customize-modal .payment-card:last-child { border-bottom: none; }
+      #customize-modal .payment-card:hover { background: #fafafa; }
+      #customize-modal .payment-card input[type="radio"] { display: none; }
+      #customize-modal .pc-content { display: flex; align-items: flex-start; padding: 1rem; gap: 1rem; }
+      #customize-modal .pc-icon { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; border: 1px solid #e5e7eb; border-radius: 4px; background: #fafafa; color: #374151; }
+      #customize-modal .pc-details { flex: 1; }
+      #customize-modal .pc-title { margin: 0 0 0.25rem; font-size: 1rem; font-weight: 600; color: var(--ink); }
+      #customize-modal .pc-action { display: flex; align-items: center; justify-content: center; padding-top: 0.25rem; }
+      #customize-modal .custom-radio { width: 20px; height: 20px; border: 2px solid #d1d5db; border-radius: 50%; position: relative; transition: all 0.2s; }
+      #customize-modal .payment-card input[type="radio"]:checked + .pc-content .custom-radio { border-color: var(--primary); }
+      #customize-modal .payment-card input[type="radio"]:checked + .pc-content .custom-radio::after { content: ""; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 10px; height: 10px; background: var(--primary); border-radius: 50%; }
+      #customize-modal .pc-expanded { display: none; padding: 1rem; background: #f9fafb; border-top: 1px solid #e5e7eb; }
+    </style>
     <div class="modal-overlay" id="customize-modal">
+
       <div class="modal-content" style="max-width:600px;">
         <button class="modal-close" onclick="document.getElementById('customize-modal').classList.remove('active')">&times;</button>
         <h2 class="modal-title">Custom Design Request</h2>
@@ -801,7 +943,60 @@ function showCustomizeModal() {
             </label>
           </div>
 
+          <!-- Payment Method -->
+          <div style="background:rgba(180,144,224,0.08);border:1px solid var(--border);border-radius:12px;padding:1.2rem;margin-bottom:1.5rem;">
+            <h3 style="font-size:1rem;font-weight:700;color:var(--ink);margin-bottom:1rem;display:flex;align-items:center;gap:.4rem;">💳 Payment Method *</h3>
+            <div class="payment-list">
+              <!-- UPI -->
+              <label class="payment-card" onclick="custSelectPayment('UPI')">
+                <input type="radio" name="cust-payment" value="UPI" id="cust-pay-UPI" checked>
+                <div class="pc-content">
+                  <div class="pc-icon">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"></rect><path d="M12 12h.01"></path></svg>
+                  </div>
+                  <div class="pc-details" style="display:flex; align-items:center;">
+                    <h4 class="pc-title" style="margin:0;">UPI / Scan & Pay</h4>
+                  </div>
+                  <div class="pc-action">
+                    <div class="custom-radio"></div>
+                  </div>
+                </div>
+                <div class="pc-expanded" id="cust-details-UPI" style="display:block;">
+                  <div style="text-align:center;">
+                    <p style="margin-bottom: 0.5rem; font-weight: 500;">Scan to Pay: <span id="cust-pay-amount">₹200</span></p>
+                    <img id="cust-qr-code" src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=upi://pay?pa=store@upi%26pn=HandmadeHeaven%26am=200" alt="UPI QR Code" style="max-width:180px; width:100%; height:auto; display:inline-block; border-radius:8px; border:1px solid #e5e7eb;" />
+                    <div style="margin-top: 1rem; text-align: left;">
+                      <label style="display:block; margin-bottom:0.4rem; font-size:0.85rem; font-weight:600; color:var(--ink);">Enter UPI Transaction ID (UTR) *</label>
+                      <input type="text" id="cust-upi-utr" class="form-input" placeholder="12-digit UTR Number" maxlength="12" oninput="validateCustUTR()" />
+                      <span id="cust-utr-err" style="font-size:.75rem;color:#dc2626;display:none;margin-top:.3rem;">⚠️ Enter a valid 12-digit numeric UTR.</span>
+                    </div>
+                  </div>
+                </div>
+              </label>
+
+              <!-- COD -->
+              <label class="payment-card" onclick="custSelectPayment('COD')">
+                <input type="radio" name="cust-payment" value="COD" id="cust-pay-COD">
+                <div class="pc-content">
+                  <div class="pc-icon">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="20" height="12" rx="2"></rect><circle cx="12" cy="12" r="2"></circle></svg>
+                  </div>
+                  <div class="pc-details" style="display:flex; align-items:center;">
+                    <h4 class="pc-title" style="margin:0;">Cash on Delivery</h4>
+                  </div>
+                  <div class="pc-action">
+                    <div class="custom-radio"></div>
+                  </div>
+                </div>
+                <div class="pc-expanded" id="cust-details-COD">
+                  <p style="font-size: 0.95rem; color: var(--ink-light); margin:0;">Pay with cash upon delivery</p>
+                </div>
+              </label>
+            </div>
+          </div>
+
           <!-- Bill Summary -->
+
           <div style="background:linear-gradient(135deg,rgba(118,75,162,0.08),rgba(180,144,224,0.12));border:1.5px solid var(--primary-light);border-radius:12px;padding:1.2rem;margin-bottom:1.5rem;">
             <h3 style="font-size:1rem;font-weight:700;color:var(--ink);margin-bottom:1rem;">🧾 Estimated Bill</h3>
             <div style="display:flex;justify-content:space-between;padding:.4rem 0;border-bottom:1px dashed var(--border);font-size:.9rem;color:var(--ink-light);">
@@ -839,7 +1034,44 @@ function showCustomizeModal() {
     const totalEl = document.getElementById('bill-total');
     if (deliveryEl) deliveryEl.textContent = deliveryCharge === 0 ? 'FREE' : '₹' + deliveryCharge;
     if (totalEl) totalEl.textContent = '₹' + total;
+
+    // Update QR Code
+    const qrEl = document.getElementById('cust-qr-code');
+    const payAmtEl = document.getElementById('cust-pay-amount');
+    if (payAmtEl) payAmtEl.textContent = '₹' + total;
+    if (qrEl) {
+      qrEl.src = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=upi://pay?pa=store@upi%26pn=HandmadeHeaven%26am=${total}`;
+    }
+    validateCustUTR();
   };
+
+  window.custSelectPayment = function(method) {
+    document.getElementById('cust-pay-' + method).checked = true;
+    document.querySelectorAll('#customize-modal .pc-expanded').forEach(el => el.style.display = 'none');
+    document.getElementById('cust-details-' + method).style.display = 'block';
+    validateCustUTR();
+  };
+
+  window.validateCustUTR = function() {
+    const isUPI = document.getElementById('cust-pay-UPI').checked;
+    const submitBtn = document.querySelector('#customize-modal button[type="submit"]');
+    if (!isUPI) {
+      if (submitBtn) submitBtn.disabled = false;
+      return;
+    }
+    const utr = document.getElementById('cust-upi-utr').value;
+    const isValid = /^\d{12}$/.test(utr);
+    const errEl = document.getElementById('cust-utr-err');
+
+    if (utr.length > 0 && !/^\d+$/.test(utr)) {
+      document.getElementById('cust-upi-utr').value = utr.replace(/[^\d]/g, '');
+    }
+
+    if (submitBtn) {
+      submitBtn.disabled = !isValid;
+    }
+  };
+
 
   window.previewCustomImage = function(input) {
     if (input.files && input.files[0]) {
@@ -921,7 +1153,7 @@ function showCustomizeModal() {
     fetchCustomPin(cleaned);
   };
 
-  window.submitCustomRequest = function(e) {
+  window.submitCustomRequest = async function(e) {
     e.preventDefault();
     const phone = document.getElementById('cust-phone').value;
     const house = document.getElementById('addr-house').value;
@@ -937,6 +1169,17 @@ function showCustomizeModal() {
     const deliveryCharge = isExpress ? 50 : 0;
     const total = CUSTOM_CHARGE + deliveryCharge;
 
+    const selectedPayment = document.querySelector('input[name="cust-payment"]:checked');
+    let paymentMethod = selectedPayment ? selectedPayment.value : 'TBD';
+    if (paymentMethod === 'UPI') {
+      const utr = document.getElementById('cust-upi-utr').value;
+      if (!/^\d{12}$/.test(utr)) {
+        showFlash('Please enter a valid 12-digit UTR number.', 'error');
+        return;
+      }
+      paymentMethod = `UPI (UTR: ${utr})`;
+    }
+
     const user = Auth.currentUser() || {};
     const order = {
       id: Date.now(),
@@ -945,7 +1188,7 @@ function showCustomizeModal() {
         email: user.email || '',
         phone: phone,
         address: address,
-        paymentMethod: 'TBD'
+        paymentMethod: paymentMethod
       },
       items: [],
       total: total,
@@ -959,16 +1202,31 @@ function showCustomizeModal() {
       date: new Date().toISOString(),
     };
 
-    const res = apiCall('orders.php?action=placeCustom', 'POST', {
-        id: order.id,
-        user_id: user.id || null,
-        total: order.total,
-        phone: phone,
-        address: address,
-        paymentMethod: 'TBD',
-        customText: text,
-        customImage: imageBase64
-    });
+    let res = {};
+    try {
+        const url = API_PREFIX + 'orders.php?action=placeCustom&t=' + Date.now();
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                id: order.id,
+                user_id: user.id || null,
+                total: order.total,
+                phone: phone,
+                address: address,
+                paymentMethod: paymentMethod,
+                customText: text,
+                customImage: imageBase64,
+                email: user.email,
+                name: user.name
+            })
+        });
+        res = await response.json();
+    } catch (e) {
+        console.error("Custom order sync failed:", e);
+        res = { error: e.message };
+    }
+
 
     if (res.error) {
         showFlash('Error submitting custom request: ' + res.error, 'error');

@@ -208,7 +208,7 @@
   </div>
 </footer>
 
-<script src="../js/store.js"></script>
+<script src="../js/store.js?v=3"></script>
 <script>
   document.getElementById('yr').textContent = new Date().getFullYear();
   renderNav();
@@ -217,12 +217,12 @@
   const STEPS = ['pending_approval','processing','shipped','delivered'];
 
   function statusBadge(s) {
-    const display = s.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-    return `<span class="order-status status-${s}">${display}</span>`;
+    const display = (s || '').split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+    return `<span class="order-status status-${(s||'').toLowerCase().replace(/ /g,'-')}">${display}</span>`;
   }
 
-  function renderOrders() {
-    const orders = Orders.get();
+  async function renderOrders() {
+    const orders = await Orders.get();
     const root = document.getElementById('orders-root');
     if (!orders.length) {
       root.innerHTML = `<div class="empty-state"><p>No orders yet.</p><a href="products.html" class="btn-primary">Start Shopping</a></div>`;
@@ -238,7 +238,7 @@
           ${statusBadge(o.status)}
         </div>
         <div class="order-card-footer">
-          <span class="order-total">${fmt(o.total)}</span>
+          <span class="order-total">${fmt(o.total + (o.extraCharge || 0))}</span>
           <div style="display:flex; gap:0.5rem">
             <button class="btn-outline btn-sm" onclick="showDetail(${o.id})">View Details</button>
           </div>
@@ -247,10 +247,10 @@
     </div>`;
   }
 
-  function showDetail(id) {
-    const order = Orders.getById(id);
+  async function showDetail(id) {
+    const order = await Orders.getById(id);
     if (!order) return;
-    const currentIdx = STEPS.indexOf(order.status);
+    const currentIdx = STEPS.indexOf(order.status.toLowerCase().replace(/ /g,'_').replace('out_for_delivery','shipped'));
     document.getElementById('detail-title').textContent = `Order #${order.id}`;
     document.getElementById('detail-body').innerHTML = `
       <div class="order-items-list">
@@ -278,7 +278,13 @@
         <div class="summary-row"><span>Order ID</span><span>#${order.id}</span></div>
         <div class="summary-row"><span>Date</span><span>${new Date(order.date).toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'})}</span></div>
         <div class="summary-row"><span>Status</span>${statusBadge(order.status)}</div>
-        ${order.total > 0 ? `<div class="summary-row summary-total"><span>Total</span><span>${fmt(order.total)}</span></div>` : ''}
+        ${order.extraCharge > 0 ? `
+          <div class="summary-row"><span>Base Customization</span><span>${fmt(order.total)}</span></div>
+          <div class="summary-row" style="color: #d97706; font-weight: 600;"><span>Extra Customization</span><span>+ ${fmt(order.extraCharge)}</span></div>
+          <div class="summary-row summary-total"><span>Total Bill</span><span>${fmt(order.total + order.extraCharge)}</span></div>
+        ` : order.total > 0 ? `
+          <div class="summary-row summary-total"><span>Total Bill</span><span>${fmt(order.total)}</span></div>
+        ` : ''}
 
         ${order.customer && order.customer.name ? `
         <div class="order-customer-details" style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--border);">
@@ -301,7 +307,7 @@
             ${order.status === 'pending_approval' ? `
               <div class="approval-actions">
                 <button class="btn-decline" onclick="declineOrder(${order.id})">Decline</button>
-                <button class="btn-approve" onclick="openPaymentModal(${order.id}, ${order.total})">Approve & Pay</button>
+                <button class="btn-approve" onclick="openPaymentModal(${order.id}, ${order.total}, ${order.extraCharge})">Approve & Pay</button>
                 <button onclick="cancelOrder(${order.id})" style="background:#fee2e2;color:#dc2626;border:1.5px solid #fca5a5;border-radius:8px;padding:.55rem 1.1rem;font-size:.88rem;font-weight:600;cursor:pointer;">✕ Cancel Order</button>
               </div>
               
@@ -362,17 +368,34 @@
     input.click();
   }
 
-  window.openPaymentModal = function(id, orderTotal) {
+  window.openPaymentModal = function(id, orderTotal, extraCharge) {
     const existingModal = document.getElementById('pay-modal-overlay');
     if (existingModal) existingModal.remove();
 
-    const totalDisplay = orderTotal > 0 ? fmt(orderTotal) : 'As quoted by artisan';
+    extraCharge = parseFloat(extraCharge) || 0;
+    const grandTotal = orderTotal + extraCharge;
+    const totalDisplay = grandTotal > 0 ? fmt(grandTotal) : 'As quoted by artisan';
+
+    const breakdownHTML = extraCharge > 0 ? `
+      <div style="background:#f9f5ff; border:1px solid var(--border); border-radius:8px; padding:0.9rem; margin-bottom:1rem; font-size:0.9rem;">
+        <div style="display:flex; justify-content:space-between; margin-bottom:0.35rem; color:var(--ink-light);">
+          <span>Base Customize Charge</span><span>${fmt(orderTotal)}</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; margin-bottom:0.5rem; color:#d97706; font-weight:600;">
+          <span>➕ Extra Material / Work</span><span>+ ${fmt(extraCharge)}</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; font-weight:700; font-size:1rem; color:var(--ink); border-top:1px solid var(--border); padding-top:0.5rem;">
+          <span>Grand Total</span><span style="color:var(--primary);">${fmt(grandTotal)}</span>
+        </div>
+      </div>` : '';
 
     const modalHTML = `
       <div class="pay-modal-overlay" id="pay-modal-overlay">
         <div class="pay-modal-box">
           <h2 class="pay-modal-title">Complete Your Payment</h2>
           <p class="pay-modal-desc">You are approving this custom design. Select your payment method to confirm the order.</p>
+
+          ${breakdownHTML}
 
           <div class="pay-modal-total">
             <span>Amount to Pay</span>
@@ -393,7 +416,12 @@
               <div class="pm-expanded" id="upi-opt">
                 <p style="text-align:center; font-size:.9rem; font-weight:500; margin-bottom:.6rem;">Scan to Pay</p>
                 <div style="text-align:center;">
-                  <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=upi://pay?pa=store@upi%26pn=HandmadeHeaven%26am=${orderTotal}" alt="UPI QR" style="max-width:180px; width:100%; border-radius:8px; border:1px solid #e5e7eb;" />
+                  <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=upi://pay?pa=store@upi%26pn=HandmadeHeaven%26am=${grandTotal}" alt="UPI QR" style="max-width:180px; width:100%; border-radius:8px; border:1px solid #e5e7eb;" />
+                  <div style="margin-top: 1rem; text-align: left;">
+                    <label style="display:block; margin-bottom:0.4rem; font-size:0.85rem; font-weight:600; color:var(--ink);">Enter UPI Transaction ID (UTR) *</label>
+                    <input type="text" id="order-upi-utr" class="form-input" placeholder="12-digit UTR Number" maxlength="12" oninput="validateOrderUTR()" />
+                    <span id="order-utr-err" style="font-size:.75rem;color:#dc2626;display:none;margin-top:.3rem;">⚠️ Enter a valid 12-digit numeric UTR.</span>
+                  </div>
                 </div>
               </div>
             </label>
@@ -449,19 +477,49 @@
     document.querySelectorAll('.pm-expanded').forEach(el => el.style.display = 'none');
     const el = document.getElementById(expandId);
     if (el) el.style.display = 'block';
+    validateOrderUTR();
   };
 
-  window.confirmPayment = function(id) {
+  window.validateOrderUTR = function() {
+    const isUPI = document.getElementById('pm-upi') && document.getElementById('pm-upi').checked;
+    const submitBtn = document.querySelector('.pay-modal-actions .btn-primary');
+    if (!isUPI) {
+      if (submitBtn) submitBtn.disabled = false;
+      return;
+    }
+    const utr = document.getElementById('order-upi-utr').value;
+    const isValid = /^\d{12}$/.test(utr);
+
+    if (utr.length > 0 && !/^\d+$/.test(utr)) {
+      document.getElementById('order-upi-utr').value = utr.replace(/[^\d]/g, '');
+    }
+
+    if (submitBtn) {
+      submitBtn.disabled = !isValid;
+    }
+  };
+
+
+  window.confirmPayment = async function(id) {
     const selected = document.querySelector('input[name="cust-pay"]:checked');
     if (!selected) { showFlash('Please select a payment method.', 'error'); return; }
-    const paymentMethod = selected.value;
+    let paymentMethod = selected.value;
 
-    // Save payment method in order
-    const res = Orders.confirmAndPay(id, paymentMethod);
+    if (paymentMethod === 'UPI') {
+      const utr = document.getElementById('order-upi-utr').value;
+      if (!/^\d{12}$/.test(utr)) {
+        showFlash('Please enter a valid 12-digit UTR number.', 'error');
+        return;
+      }
+      paymentMethod = `UPI (UTR: ${utr})`;
+    }
+
+    const res = await Orders.confirmAndPay(id, paymentMethod);
+
     if (res && res.success) {
       document.getElementById('pay-modal-overlay').remove();
-      renderOrders();
-      showDetail(id);
+      await renderOrders();
+      await showDetail(id);
       showFlash('Payment confirmed! Order is now processing. 🎉');
     } else {
       showFlash('Failed to confirm payment on backend.', 'error');
@@ -472,27 +530,27 @@
     document.getElementById(`revision-box-${id}`).style.display = 'block';
   };
 
-  window.cancelOrder = function(id) {
+  window.cancelOrder = async function(id) {
     if (!confirm('Are you sure you want to cancel this order? This cannot be undone.')) return;
-    const res = Orders.updateStatus(id, 'Cancelled');
+    const res = await Orders.updateStatus(id, 'Cancelled');
     if (res && res.success) {
       hideDetail();
-      renderOrders();
+      await renderOrders();
       showFlash('Order has been cancelled.', 'error');
     } else {
       showFlash('Failed to cancel order on backend.', 'error');
     }
   };
 
-  window.submitRevision = function(id) {
-    const text = document.getElementById(`revision-text-${id}`).value;
+  window.submitRevision = async function(id) {
+    const text = document.getElementById(`revision-text-${id}`).value.trim();
     if(!text) return alert("Please specify what needs changing.");
     
-    const res = Orders.updateStatus(id, 'pending_review');
+    const res = await Orders.updateStatus(id, 'pending_review', text);
     if (res && res.success) {
-      renderOrders();
-      showDetail(id);
-      showFlash("Revision requested. We will update the preview soon.");
+      await renderOrders();
+      await showDetail(id);
+      showFlash("Revision requested. Seller has been notified.");
     } else {
       showFlash('Failed to request revision on backend.', 'error');
     }
@@ -502,12 +560,12 @@
   const params = new URLSearchParams(window.location.search);
   const newId = params.get('new');
 
-  renderOrders();
-
-  if (newId) {
-    showFlash(`Order #${newId} placed successfully!`);
-    setTimeout(() => showDetail(parseInt(newId)), 300);
-  }
+  renderOrders().then(async () => {
+    if (newId) {
+      showFlash(`Order #${newId} placed successfully!`);
+      setTimeout(() => showDetail(parseInt(newId)), 800);
+    }
+  });
 </script>
 </body>
 </html>

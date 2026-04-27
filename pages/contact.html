@@ -271,8 +271,15 @@
         </div>
       </div>
     </div>
-  </div>
-</main>
+    
+    <!-- Past Queries -->
+    <div style="max-width: 1100px; margin: 0 auto; padding: 0 2rem 4rem;">
+      <h3 style="font-size: 1.5rem; color: var(--ink); margin-bottom: 1.5rem; font-style: italic;">Past Queries & Replies 💬</h3>
+      <div id="past-queries-root">
+         <p style="color: var(--muted); font-size: 0.95rem;">Please log in to view your queries and seller replies.</p>
+      </div>
+    </div>
+  </main>
 
 <footer class="site-footer">
   <div class="footer-top">
@@ -324,11 +331,124 @@
   </div>
 </footer>
 
-<script src="../js/store.js"></script>
+<script src="../js/store.js?v=3"></script>
 <script>
   document.getElementById('yr').textContent = new Date().getFullYear();
   renderNav();
 
+  async function loadPastQueries() {
+    const user = Auth.currentUser();
+    const root = document.getElementById('past-queries-root');
+    if (!user) {
+      root.innerHTML = `<p style="color: var(--muted); font-size: 0.95rem;">Please <a href="login.html" style="color:var(--primary); font-weight:600;">Log In</a> to view your past queries and seller replies.</p>`;
+      return;
+    }
+
+    try {
+      const res = await fetch('../backend/contact.php?action=getByEmail&email=' + encodeURIComponent(user.email));
+      const data = await res.json();
+
+      if (!data || data.length === 0) {
+        root.innerHTML = `<p style="color: var(--muted); font-size: 0.95rem;">You haven't submitted any queries yet.</p>`;
+        return;
+      }
+
+      root.innerHTML = data.map(q => {
+        const queryDate = new Date(q.created_at).toLocaleString('en-IN');
+        let threadHTML = '';
+        let hasConversation = false;
+        
+        if (q.conversation) {
+            try {
+                const thread = JSON.parse(q.conversation);
+                if (Array.isArray(thread) && thread.length > 0) {
+                    hasConversation = true;
+                    threadHTML = thread.map(m => {
+                        const isArtisan = m.sender === 'artisan';
+                        const senderName = isArtisan ? 'Artisan' : 'You';
+                        const alignStyle = isArtisan ? 'margin-right: auto; background: rgba(180,144,224,0.08); border-left: 4px solid var(--primary);' : 'margin-left: auto; background: white; border-right: 4px solid var(--gray); box-shadow: 0 2px 4px rgba(0,0,0,0.03);';
+                        return `
+                            <div style="padding: 0.75rem 1rem; border-radius: 12px; margin-bottom: 0.5rem; max-width: 85%; ${alignStyle}">
+                                <strong style="color: ${isArtisan ? 'var(--primary)' : 'var(--ink)'}; font-size: 0.85rem; display: block; margin-bottom: 0.25rem;">${senderName}:</strong>
+                                <p style="font-size: 0.95rem; color: var(--ink); line-height: 1.5; margin: 0;">${m.text}</p>
+                                ${m.created_at && m.created_at !== 'Legacy' ? `<span style="font-size: 0.65rem; color: var(--muted); display: block; text-align: right; margin-top: 0.4rem;">${new Date(m.created_at).toLocaleString('en-IN')}</span>` : ''}
+                            </div>
+                        `;
+                    }).join('');
+                }
+            } catch(e) {
+                hasConversation = false;
+            }
+        }
+        
+        if (!hasConversation) {
+            threadHTML = `
+                <div style="padding: 0.75rem 1rem; border-radius: 12px; margin-bottom: 0.5rem; max-width: 85%; margin-left: auto; background: white; border-right: 4px solid var(--gray); box-shadow: 0 2px 4px rgba(0,0,0,0.03);">
+                    <strong style="color: var(--ink); font-size: 0.85rem; display: block; margin-bottom: 0.25rem;">You:</strong>
+                    <p style="font-size: 0.95rem; color: var(--ink); line-height: 1.5; margin: 0;">${q.message}</p>
+                </div>
+                ${q.reply ? `
+                  <div style="padding: 0.75rem 1rem; border-radius: 12px; margin-bottom: 0.5rem; max-width: 85%; margin-right: auto; background: rgba(180,144,224,0.08); border-left: 4px solid var(--primary);">
+                    <strong style="color: var(--primary); font-size: 0.85rem; display: block; margin-bottom: 0.25rem;">Artisan:</strong>
+                    <p style="font-size: 0.95rem; color: var(--ink); line-height: 1.5; margin: 0;">${q.reply}</p>
+                  </div>
+                ` : `
+                  <div style="font-size: 0.85rem; color: var(--muted); font-style: italic; padding: 0.5rem;">Awaiting artisan reply...</div>
+                `}
+            `;
+        }
+
+        return `
+          <div style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 4px 6px rgba(0,0,0,0.02);">
+            <div style="display: flex; justify-content: space-between; flex-wrap: wrap; margin-bottom: 1rem; gap: 0.5rem; border-bottom: 1px dashed var(--border); padding-bottom: 0.5rem;">
+              <strong style="color: var(--ink);">${q.subject || '(No Subject)'}</strong>
+              <span style="font-size: 0.8rem; color: var(--muted);">${queryDate}</span>
+            </div>
+            
+            <div style="display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 1.5rem;">
+              ${threadHTML}
+            </div>
+
+            <form onsubmit="submitCustomerReply(event, ${q.id})" style="display: flex; gap: 0.5rem;">
+              <input type="text" id="reply-input-${q.id}" required placeholder="Type your reply..." style="flex: 1; padding: 0.6rem 1rem; border-radius: 8px; border: 1px solid var(--border); font-size: 0.9rem; background: var(--bg-card); color: var(--ink);"/>
+              <button type="submit" class="btn-primary" style="padding: 0.6rem 1.2rem; border-radius: 8px; font-size: 0.9rem;">Reply</button>
+            </form>
+          </div>
+        `;
+      }).join('');
+    } catch (err) {
+      root.innerHTML = `<p style="color: #dc2626; font-size: 0.95rem;">⚠️ Failed to load past queries.</p>`;
+    }
+  }
+
+  window.submitCustomerReply = async function(e, queryId) {
+    e.preventDefault();
+    const inputEl = document.getElementById('reply-input-' + queryId);
+    const reply = inputEl.value.trim();
+    if (!reply) return;
+
+    try {
+      const res = await fetch('../backend/contact.php?action=customerReply', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: queryId, reply: reply })
+      });
+      const data = await res.json();
+      if (data.success) {
+        inputEl.value = '';
+        loadPastQueries();
+      } else {
+        alert('Error: ' + data.error);
+      }
+    } catch (err) {
+      alert('Failed to connect to backend.');
+    }
+  };
+
+  loadPastQueries();
+
+  // On submit, reload past queries
+  const originalSendMessage = window.sendMessage;
   window.sendMessage = async function(e) {
     e.preventDefault();
     const name = document.getElementById('contact-name').value;
@@ -346,6 +466,7 @@
       if (data.success) {
         showFlash('Message sent! Saved securely. ✉️');
         e.target.reset();
+        loadPastQueries();
       } else {
         alert('Error: ' + data.error);
       }
@@ -353,6 +474,8 @@
       alert('Failed to connect to backend.');
     }
   };
+
+
 </script>
 </body>
 </html>

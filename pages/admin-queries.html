@@ -60,6 +60,47 @@
       
       listEl.innerHTML = data.map(q => {
         const queryDate = new Date(q.created_at).toLocaleString('en-IN');
+        let threadHTML = '';
+        let hasConversation = false;
+        
+        if (q.conversation) {
+            try {
+                const thread = JSON.parse(q.conversation);
+                if (Array.isArray(thread) && thread.length > 0) {
+                    hasConversation = true;
+                    threadHTML = thread.map(m => {
+                        const isArtisan = m.sender === 'artisan';
+                        const senderName = isArtisan ? 'Artisan (You)' : q.name;
+                        const alignStyle = isArtisan ? 'margin-left: auto; background: rgba(210, 138, 140, 0.05); border-right: 4px solid var(--primary);' : 'margin-right: auto; background: #f9f9f9; border-left: 4px solid var(--gray);';
+                        return `
+                            <div style="padding: 0.75rem 1rem; border-radius: 8px; margin-bottom: 0.5rem; max-width: 85%; ${alignStyle}">
+                                <strong style="color: ${isArtisan ? 'var(--primary)' : 'var(--ink)'}; font-size: 0.85rem; display: block; margin-bottom: 0.25rem;">${senderName}:</strong>
+                                <p style="font-size: 0.95rem; color: var(--ink); line-height: 1.5; margin: 0;">${m.text}</p>
+                                ${m.created_at && m.created_at !== 'Legacy' ? `<span style="font-size: 0.65rem; color: var(--muted); display: block; text-align: right; margin-top: 0.4rem;">${new Date(m.created_at).toLocaleString('en-IN')}</span>` : ''}
+                            </div>
+                        `;
+                    }).join('');
+                }
+            } catch(e) {
+                hasConversation = false;
+            }
+        }
+        
+        if (!hasConversation) {
+            threadHTML = `
+                <div style="padding: 0.75rem 1rem; border-radius: 8px; margin-bottom: 0.5rem; max-width: 85%; margin-right: auto; background: #f9f9f9; border-left: 4px solid var(--gray);">
+                    <strong style="color: var(--ink); font-size: 0.85rem; display: block; margin-bottom: 0.25rem;">${q.name}:</strong>
+                    <p style="font-size: 0.95rem; color: var(--ink); line-height: 1.5; margin: 0;">${q.message}</p>
+                </div>
+                ${q.reply ? `
+                  <div style="padding: 0.75rem 1rem; border-radius: 8px; margin-bottom: 0.5rem; max-width: 85%; margin-left: auto; background: rgba(210, 138, 140, 0.05); border-right: 4px solid var(--primary);">
+                    <strong style="color: var(--primary); font-size: 0.85rem; display: block; margin-bottom: 0.25rem;">Artisan (You):</strong>
+                    <p style="font-size: 0.95rem; color: var(--ink); line-height: 1.5; margin: 0;">${q.reply}</p>
+                  </div>
+                ` : ''}
+            `;
+        }
+
         return `
           <div class="query-card">
             <div class="query-header">
@@ -80,8 +121,15 @@
               </div>
             </div>
             
-            <div class="query-message">
-              ${q.message}
+            <div class="query-thread" style="margin-bottom: 1.5rem; display: flex; flex-direction: column; gap: 0.5rem;">
+              ${threadHTML}
+            </div>
+
+            <div class="reply-section" style="margin-top: 1rem; display: flex; flex-direction: column; gap: 0.5rem;">
+              <textarea id="reply-text-${q.id}" placeholder="Type your reply here..." style="width: 100%; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--border); resize: vertical; min-height: 80px; font-family: inherit; font-size: 0.95rem;"></textarea>
+              <button class="btn-action" style="align-self: flex-end; background: var(--primary); color: white; border: none; padding: 0.5rem 1.5rem; border-radius: 6px; font-weight: 600; cursor: pointer;" onclick="sendReply(${q.id})">
+                ${q.reply ? 'Update Reply' : 'Send Reply'}
+              </button>
             </div>
           </div>
         `;
@@ -93,6 +141,31 @@
           <p>⚠️ Error fetching queries. Please ensure server is running.</p>
         </div>
       `;
+    }
+  }
+
+  async function sendReply(id) {
+    const replyText = document.getElementById(`reply-text-${id}`).value.trim();
+    if (!replyText) {
+      alert('Please enter a reply.');
+      return;
+    }
+
+    try {
+      const res = await fetch('../backend/contact.php?action=saveReply', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, reply: replyText })
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert('Reply saved successfully!');
+        loadQueries();
+      } else {
+        alert('Error: ' + data.error);
+      }
+    } catch (err) {
+      alert('Failed to connect to backend.');
     }
   }
 
