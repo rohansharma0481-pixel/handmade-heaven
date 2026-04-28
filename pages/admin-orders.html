@@ -309,6 +309,21 @@
               </div>
               ${(order.extra_charge > 0) ? `<p style="margin-top:0.5rem; font-size:0.8rem; color:var(--sage); font-weight:500;">✅ Extra charge of ₹${order.extra_charge} already set. Customer must re-approve.</p>` : ''}
             </div>
+
+            <!-- Delivery Date Section -->
+            <div style="margin-top:1rem; padding:1.2rem; background:linear-gradient(135deg,rgba(118,75,162,0.06),rgba(180,144,224,0.1)); border:1.5px solid var(--primary-light); border-radius:10px;">
+              <h4 style="font-size:0.85rem; color:var(--primary); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.8rem;">📅 Estimated Delivery Date</h4>
+              <div style="display:flex; align-items:center; gap:0.75rem; flex-wrap:wrap;">
+                <input type="text" id="deldate-${order.id}" value="${order.delivery_date || ''}" placeholder="e.g., 5th May or 12-15 Days" 
+                  style="padding:0.4rem 0.6rem; border:1.5px solid var(--primary-light); border-radius:6px; font-size:0.95rem; font-weight:600; color:var(--ink); width:200px;"
+                />
+                <button onclick="saveDeliveryDate('${order.id}')"
+                  style="background:var(--primary); color:#fff; border:none; border-radius:8px; padding:0.45rem 1rem; font-size:0.85rem; font-weight:600; cursor:pointer;">
+                  💾 Save Date
+                </button>
+              </div>
+              ${order.delivery_date ? `<p style="margin-top:0.5rem; font-size:0.8rem; color:var(--sage); font-weight:500;">✅ Delivery date set: <strong>${order.delivery_date}</strong></p>` : ''}
+            </div>
             
             <div class="order-total">
               Total Bill: ${fmt(order.total)}
@@ -393,6 +408,27 @@
           loadOrders();
         } else {
           alert('Error: ' + (data.error || 'Failed to save'));
+        }
+      } catch (err) {
+        alert('Error connecting to server.');
+      }
+    }
+
+    async function saveDeliveryDate(orderId) {
+      const input = document.getElementById('deldate-' + orderId);
+      const deliveryDate = input ? input.value.trim() : '';
+      try {
+        const res = await fetch('../backend/orders.php?action=updateDeliveryDate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ orderId, deliveryDate })
+        });
+        const data = await res.json();
+        if (data.success) {
+          alert('✅ Estimated Delivery Date saved!');
+          loadOrders();
+        } else {
+          alert('Error: ' + data.error);
         }
       } catch (err) {
         alert('Error connecting to server.');

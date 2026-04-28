@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Seller Admin Portal | Handmade Heaven</title>
+  <link rel="stylesheet" href="../css/style.css"/>
+  <style>
+    .admin-container { max-width: 1000px; margin: 4rem auto; padding: 0 1.5rem; text-align: center; }
+    .page-title { font-size: 2.2rem; font-weight: 700; color: var(--ink); margin-bottom: 0.5rem; }
+    .page-subtitle { font-size: 1.1rem; color: var(--muted); margin-bottom: 3rem; }
+    
+    .admin-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 2rem; }
+    .admin-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 2.5rem 2rem; text-align: center; box-shadow: var(--shadow); transition: all 0.4s cubic-bezier(0.2, 0.8, 0.2, 1); display: flex; flex-direction: column; align-items: center; justify-content: space-between; gap: 1.5rem; }
+    .admin-card:hover { transform: translateY(-8px); box-shadow: var(--shadow-lg); border-color: var(--primary-light); }
+    
+    .card-icon { font-size: 2.5rem; color: var(--primary); background: rgba(210, 138, 140, 0.15); width: 80px; height: 80px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 0.5rem; }
+    .card-title { font-size: 1.3rem; font-weight: 600; color: var(--ink); }
+    .card-desc { font-size: 0.95rem; color: var(--muted); line-height: 1.6; }
+  </style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="header-inner">
+    <div class="header-left">
+      <a href="../index.html" class="logo-wrapper">
+        <img src="../images/logo.png" alt="Handmade Heaven Logo" class="logo-img" style="height: 60px; width: auto; object-fit: contain;" />
+      </a>
+      <span style="font-weight:700; font-size:1.2rem; color:var(--primary); margin-left:10px;">Seller Dashboard</span>
+    </div>
+  </div>
+</header>
+
+<main class="admin-container">
+  <h1 class="page-title">Handmade Heaven Admin Portal</h1>
+  <p class="page-subtitle">Manage your inventory, process orders, and reply to client requests.</p>
+  
+  <!-- Stats Section -->
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-bottom: 3rem;">
+    <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:12px; padding:1.5rem; box-shadow:var(--shadow);">
+      <h4 style="font-size:0.85rem; color:var(--muted); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.5rem;">Listed Products</h4>
+      <p id="stat-products" style="font-size:2rem; font-weight:700; color:var(--primary);">Loading...</p>
+    </div>
+    <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:12px; padding:1.5rem; box-shadow:var(--shadow);">
+      <h4 style="font-size:0.85rem; color:var(--muted); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.5rem;">Total Orders</h4>
+      <p id="stat-orders" style="font-size:2rem; font-weight:700; color:var(--primary);">Loading...</p>
+    </div>
+    <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:12px; padding:1.5rem; box-shadow:var(--shadow);">
+      <h4 style="font-size:0.85rem; color:var(--muted); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.5rem;">Estimated Revenue</h4>
+      <p id="stat-revenue" style="font-size:2rem; font-weight:700; color:var(--sage);">Loading...</p>
+    </div>
+  </div>
+
+  <div class="admin-grid">
+    
+    <div class="admin-card">
+      <div class="card-icon">🛍️</div>
+      <div>
+        <h3 class="card-title">Product Manager</h3>
+        <p class="card-desc">Edit product names, stock, prices, categories, or upload new creations.</p>
+      </div>
+      <a href="admin-products.html" class="btn-primary" style="width: 100%;">Go to Products</a>
+    </div>
+
+    <div class="admin-card">
+      <div class="card-icon">📦</div>
+      <div>
+        <h3 class="card-title">Orders Dashboard</h3>
+        <p class="card-desc">View customer purchases, assign extra work charges, and change order status.</p>
+      </div>
+      <a href="admin-orders.html" class="btn-primary" style="width: 100%;">Go to Orders</a>
+    </div>
+
+    <div class="admin-card">
+      <div class="card-icon">💬</div>
+      <div>
+        <h3 class="card-title">Client Queries</h3>
+        <p class="card-desc">Answer questions from customers and process custom artwork quotes.</p>
+      </div>
+      <a href="admin-queries.html" class="btn-primary" style="width: 100%;">Go to Queries</a>
+    </div>
+
+  </div>
+</main>
+
+<script>
+  async function loadStats() {
+    try {
+      // Products
+      const prodRes = await fetch('../backend/products.php?action=get');
+      const products = await prodRes.json();
+      document.getElementById('stat-products').textContent = products.length || 0;
+
+      // Orders
+      const orderRes = await fetch('../backend/orders.php?action=getAll');
+      const orders = await orderRes.json();
+      document.getElementById('stat-orders').textContent = orders.length || 0;
+
+      // Revenue
+      let revenue = 0;
+      orders.forEach(o => {
+        if (o.status !== 'Cancelled') {
+          revenue += parseFloat(o.total || 0) + parseFloat(o.extra_charge || 0);
+        }
+      });
+      document.getElementById('stat-revenue').textContent = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 0 }).format(revenue);
+    } catch (e) {
+      console.error(e);
+    }
+  }
+  loadStats();
+</script>
+
+</body>
+</html>

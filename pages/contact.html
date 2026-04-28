@@ -336,6 +336,15 @@
   document.getElementById('yr').textContent = new Date().getFullYear();
   renderNav();
 
+  // Pre-fill contact form if user is logged in
+  const user = Auth.currentUser();
+  if (user) {
+    const nameInput = document.getElementById('contact-name');
+    const emailInput = document.getElementById('contact-email');
+    if (nameInput) { nameInput.value = user.name || ''; }
+    if (emailInput) { emailInput.value = user.email || ''; emailInput.readOnly = true; }
+  }
+
   async function loadPastQueries() {
     const user = Auth.currentUser();
     const root = document.getElementById('past-queries-root');

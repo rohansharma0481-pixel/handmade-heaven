@@ -278,6 +278,9 @@
         <div class="summary-row"><span>Order ID</span><span>#${order.id}</span></div>
         <div class="summary-row"><span>Date</span><span>${new Date(order.date).toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'})}</span></div>
         <div class="summary-row"><span>Status</span>${statusBadge(order.status)}</div>
+        ${order.delivery_date ? `
+          <div class="summary-row" style="color:var(--sage); font-weight:600;"><span>Est. Delivery Date</span><span>${order.delivery_date}</span></div>
+        ` : ''}
         ${order.extraCharge > 0 ? `
           <div class="summary-row"><span>Base Customization</span><span>${fmt(order.total)}</span></div>
           <div class="summary-row" style="color: #d97706; font-weight: 600;"><span>Extra Customization</span><span>+ ${fmt(order.extraCharge)}</span></div>
@@ -417,11 +420,6 @@
                 <p style="text-align:center; font-size:.9rem; font-weight:500; margin-bottom:.6rem;">Scan to Pay</p>
                 <div style="text-align:center;">
                   <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=upi://pay?pa=store@upi%26pn=HandmadeHeaven%26am=${grandTotal}" alt="UPI QR" style="max-width:180px; width:100%; border-radius:8px; border:1px solid #e5e7eb;" />
-                  <div style="margin-top: 1rem; text-align: left;">
-                    <label style="display:block; margin-bottom:0.4rem; font-size:0.85rem; font-weight:600; color:var(--ink);">Enter UPI Transaction ID (UTR) *</label>
-                    <input type="text" id="order-upi-utr" class="form-input" placeholder="12-digit UTR Number" maxlength="12" oninput="validateOrderUTR()" />
-                    <span id="order-utr-err" style="font-size:.75rem;color:#dc2626;display:none;margin-top:.3rem;">⚠️ Enter a valid 12-digit numeric UTR.</span>
-                  </div>
                 </div>
               </div>
             </label>
@@ -477,45 +475,14 @@
     document.querySelectorAll('.pm-expanded').forEach(el => el.style.display = 'none');
     const el = document.getElementById(expandId);
     if (el) el.style.display = 'block';
-    validateOrderUTR();
   };
-
-  window.validateOrderUTR = function() {
-    const isUPI = document.getElementById('pm-upi') && document.getElementById('pm-upi').checked;
-    const submitBtn = document.querySelector('.pay-modal-actions .btn-primary');
-    if (!isUPI) {
-      if (submitBtn) submitBtn.disabled = false;
-      return;
-    }
-    const utr = document.getElementById('order-upi-utr').value;
-    const isValid = /^\d{12}$/.test(utr);
-
-    if (utr.length > 0 && !/^\d+$/.test(utr)) {
-      document.getElementById('order-upi-utr').value = utr.replace(/[^\d]/g, '');
-    }
-
-    if (submitBtn) {
-      submitBtn.disabled = !isValid;
-    }
-  };
-
 
   window.confirmPayment = async function(id) {
     const selected = document.querySelector('input[name="cust-pay"]:checked');
     if (!selected) { showFlash('Please select a payment method.', 'error'); return; }
-    let paymentMethod = selected.value;
-
-    if (paymentMethod === 'UPI') {
-      const utr = document.getElementById('order-upi-utr').value;
-      if (!/^\d{12}$/.test(utr)) {
-        showFlash('Please enter a valid 12-digit UTR number.', 'error');
-        return;
-      }
-      paymentMethod = `UPI (UTR: ${utr})`;
-    }
+    const paymentMethod = selected.value;
 
     const res = await Orders.confirmAndPay(id, paymentMethod);
-
     if (res && res.success) {
       document.getElementById('pay-modal-overlay').remove();
       await renderOrders();

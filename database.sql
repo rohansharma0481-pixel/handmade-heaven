@@ -27,7 +27,6 @@ CREATE TABLE IF NOT EXISTS products (
 CREATE TABLE IF NOT EXISTS orders (
     id BIGINT PRIMARY KEY,
     user_id INT,
-    seller_id INT DEFAULT 1,
     total DECIMAL(10, 2) NOT NULL,
     status VARCHAR(50) DEFAULT 'pending_approval',
     phone VARCHAR(15),
@@ -36,8 +35,6 @@ CREATE TABLE IF NOT EXISTS orders (
     preview_image LONGTEXT,
     custom_text LONGTEXT,
     custom_image LONGTEXT,
-    revision_note TEXT DEFAULT NULL,
-    extra_charge DECIMAL(10, 2) DEFAULT 0.00,
     date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
 );
@@ -62,18 +59,6 @@ CREATE TABLE IF NOT EXISTS reviews (
     text TEXT,
     date DATE,
     FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
-);
-
--- Contact Queries Table
-CREATE TABLE IF NOT EXISTS contact_queries (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(100) NOT NULL,
-    email VARCHAR(100) NOT NULL,
-    subject VARCHAR(255),
-    message TEXT,
-    conversation LONGTEXT,
-    reply TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Seed Products

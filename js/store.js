@@ -362,14 +362,18 @@ function apiCall(endpoint, method = 'GET', data = null) {
 // ── Inventory ───────────────────────────────────────────────
 const Inventory = {
   get() {
-    let local = JSON.parse(localStorage.getItem('ac_products'));
-    if (!local || !local.length) {
-       local = PRODUCTS;
-       localStorage.setItem('ac_products', JSON.stringify(local));
+    let products = apiCall('products.php');
+    if (!products || products.error || !Array.isArray(products)) {
+        // Fallback to localStorage or hardcoded array if API fails for some reason
+        products = JSON.parse(localStorage.getItem('ac_products'));
+        if (!products || !products.length) {
+            products = PRODUCTS;
+        }
     }
     const isPages = window.location.pathname.includes('/pages/');
-    return local.map(p => ({
+    return products.map(p => ({
         ...p,
+        id: parseInt(p.id),
         image: (isPages ? '../' : '') + p.image.replace('../', '')
     }));
   },
@@ -532,6 +536,7 @@ const Orders = {
                 previewImage: o.preview_image,
                 customText: o.custom_text,
                 customImage: o.custom_image,
+                delivery_date: o.delivery_date,
                 customer: {
                     name: user.name,
                     email: user.email,
@@ -644,6 +649,7 @@ const Orders = {
                         previewImage: o.preview_image,
                         customText: o.custom_text,
                         customImage: o.custom_image,
+                        delivery_date: o.delivery_date,
                         customer: {
                             name: user.name,
                             email: user.email,
@@ -837,24 +843,7 @@ function showCustomizeModal() {
   const CUSTOM_CHARGE = 200;
 
   const modalHTML = `
-    <style>
-      #customize-modal .payment-list { border: 1px solid #e5e7eb; border-radius: 8px; background: #fff; overflow: hidden; margin-top: 0.5rem; }
-      #customize-modal .payment-card { display: block; border-bottom: 1px solid #e5e7eb; cursor: pointer; transition: background 0.2s; }
-      #customize-modal .payment-card:last-child { border-bottom: none; }
-      #customize-modal .payment-card:hover { background: #fafafa; }
-      #customize-modal .payment-card input[type="radio"] { display: none; }
-      #customize-modal .pc-content { display: flex; align-items: flex-start; padding: 1rem; gap: 1rem; }
-      #customize-modal .pc-icon { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; border: 1px solid #e5e7eb; border-radius: 4px; background: #fafafa; color: #374151; }
-      #customize-modal .pc-details { flex: 1; }
-      #customize-modal .pc-title { margin: 0 0 0.25rem; font-size: 1rem; font-weight: 600; color: var(--ink); }
-      #customize-modal .pc-action { display: flex; align-items: center; justify-content: center; padding-top: 0.25rem; }
-      #customize-modal .custom-radio { width: 20px; height: 20px; border: 2px solid #d1d5db; border-radius: 50%; position: relative; transition: all 0.2s; }
-      #customize-modal .payment-card input[type="radio"]:checked + .pc-content .custom-radio { border-color: var(--primary); }
-      #customize-modal .payment-card input[type="radio"]:checked + .pc-content .custom-radio::after { content: ""; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 10px; height: 10px; background: var(--primary); border-radius: 50%; }
-      #customize-modal .pc-expanded { display: none; padding: 1rem; background: #f9fafb; border-top: 1px solid #e5e7eb; }
-    </style>
     <div class="modal-overlay" id="customize-modal">
-
       <div class="modal-content" style="max-width:600px;">
         <button class="modal-close" onclick="document.getElementById('customize-modal').classList.remove('active')">&times;</button>
         <h2 class="modal-title">Custom Design Request</h2>
@@ -943,60 +932,7 @@ function showCustomizeModal() {
             </label>
           </div>
 
-          <!-- Payment Method -->
-          <div style="background:rgba(180,144,224,0.08);border:1px solid var(--border);border-radius:12px;padding:1.2rem;margin-bottom:1.5rem;">
-            <h3 style="font-size:1rem;font-weight:700;color:var(--ink);margin-bottom:1rem;display:flex;align-items:center;gap:.4rem;">💳 Payment Method *</h3>
-            <div class="payment-list">
-              <!-- UPI -->
-              <label class="payment-card" onclick="custSelectPayment('UPI')">
-                <input type="radio" name="cust-payment" value="UPI" id="cust-pay-UPI" checked>
-                <div class="pc-content">
-                  <div class="pc-icon">
-                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"></rect><path d="M12 12h.01"></path></svg>
-                  </div>
-                  <div class="pc-details" style="display:flex; align-items:center;">
-                    <h4 class="pc-title" style="margin:0;">UPI / Scan & Pay</h4>
-                  </div>
-                  <div class="pc-action">
-                    <div class="custom-radio"></div>
-                  </div>
-                </div>
-                <div class="pc-expanded" id="cust-details-UPI" style="display:block;">
-                  <div style="text-align:center;">
-                    <p style="margin-bottom: 0.5rem; font-weight: 500;">Scan to Pay: <span id="cust-pay-amount">₹200</span></p>
-                    <img id="cust-qr-code" src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=upi://pay?pa=store@upi%26pn=HandmadeHeaven%26am=200" alt="UPI QR Code" style="max-width:180px; width:100%; height:auto; display:inline-block; border-radius:8px; border:1px solid #e5e7eb;" />
-                    <div style="margin-top: 1rem; text-align: left;">
-                      <label style="display:block; margin-bottom:0.4rem; font-size:0.85rem; font-weight:600; color:var(--ink);">Enter UPI Transaction ID (UTR) *</label>
-                      <input type="text" id="cust-upi-utr" class="form-input" placeholder="12-digit UTR Number" maxlength="12" oninput="validateCustUTR()" />
-                      <span id="cust-utr-err" style="font-size:.75rem;color:#dc2626;display:none;margin-top:.3rem;">⚠️ Enter a valid 12-digit numeric UTR.</span>
-                    </div>
-                  </div>
-                </div>
-              </label>
-
-              <!-- COD -->
-              <label class="payment-card" onclick="custSelectPayment('COD')">
-                <input type="radio" name="cust-payment" value="COD" id="cust-pay-COD">
-                <div class="pc-content">
-                  <div class="pc-icon">
-                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="20" height="12" rx="2"></rect><circle cx="12" cy="12" r="2"></circle></svg>
-                  </div>
-                  <div class="pc-details" style="display:flex; align-items:center;">
-                    <h4 class="pc-title" style="margin:0;">Cash on Delivery</h4>
-                  </div>
-                  <div class="pc-action">
-                    <div class="custom-radio"></div>
-                  </div>
-                </div>
-                <div class="pc-expanded" id="cust-details-COD">
-                  <p style="font-size: 0.95rem; color: var(--ink-light); margin:0;">Pay with cash upon delivery</p>
-                </div>
-              </label>
-            </div>
-          </div>
-
           <!-- Bill Summary -->
-
           <div style="background:linear-gradient(135deg,rgba(118,75,162,0.08),rgba(180,144,224,0.12));border:1.5px solid var(--primary-light);border-radius:12px;padding:1.2rem;margin-bottom:1.5rem;">
             <h3 style="font-size:1rem;font-weight:700;color:var(--ink);margin-bottom:1rem;">🧾 Estimated Bill</h3>
             <div style="display:flex;justify-content:space-between;padding:.4rem 0;border-bottom:1px dashed var(--border);font-size:.9rem;color:var(--ink-light);">
@@ -1034,44 +970,7 @@ function showCustomizeModal() {
     const totalEl = document.getElementById('bill-total');
     if (deliveryEl) deliveryEl.textContent = deliveryCharge === 0 ? 'FREE' : '₹' + deliveryCharge;
     if (totalEl) totalEl.textContent = '₹' + total;
-
-    // Update QR Code
-    const qrEl = document.getElementById('cust-qr-code');
-    const payAmtEl = document.getElementById('cust-pay-amount');
-    if (payAmtEl) payAmtEl.textContent = '₹' + total;
-    if (qrEl) {
-      qrEl.src = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=upi://pay?pa=store@upi%26pn=HandmadeHeaven%26am=${total}`;
-    }
-    validateCustUTR();
   };
-
-  window.custSelectPayment = function(method) {
-    document.getElementById('cust-pay-' + method).checked = true;
-    document.querySelectorAll('#customize-modal .pc-expanded').forEach(el => el.style.display = 'none');
-    document.getElementById('cust-details-' + method).style.display = 'block';
-    validateCustUTR();
-  };
-
-  window.validateCustUTR = function() {
-    const isUPI = document.getElementById('cust-pay-UPI').checked;
-    const submitBtn = document.querySelector('#customize-modal button[type="submit"]');
-    if (!isUPI) {
-      if (submitBtn) submitBtn.disabled = false;
-      return;
-    }
-    const utr = document.getElementById('cust-upi-utr').value;
-    const isValid = /^\d{12}$/.test(utr);
-    const errEl = document.getElementById('cust-utr-err');
-
-    if (utr.length > 0 && !/^\d+$/.test(utr)) {
-      document.getElementById('cust-upi-utr').value = utr.replace(/[^\d]/g, '');
-    }
-
-    if (submitBtn) {
-      submitBtn.disabled = !isValid;
-    }
-  };
-
 
   window.previewCustomImage = function(input) {
     if (input.files && input.files[0]) {
@@ -1169,17 +1068,6 @@ function showCustomizeModal() {
     const deliveryCharge = isExpress ? 50 : 0;
     const total = CUSTOM_CHARGE + deliveryCharge;
 
-    const selectedPayment = document.querySelector('input[name="cust-payment"]:checked');
-    let paymentMethod = selectedPayment ? selectedPayment.value : 'TBD';
-    if (paymentMethod === 'UPI') {
-      const utr = document.getElementById('cust-upi-utr').value;
-      if (!/^\d{12}$/.test(utr)) {
-        showFlash('Please enter a valid 12-digit UTR number.', 'error');
-        return;
-      }
-      paymentMethod = `UPI (UTR: ${utr})`;
-    }
-
     const user = Auth.currentUser() || {};
     const order = {
       id: Date.now(),
@@ -1188,7 +1076,7 @@ function showCustomizeModal() {
         email: user.email || '',
         phone: phone,
         address: address,
-        paymentMethod: paymentMethod
+        paymentMethod: 'TBD'
       },
       items: [],
       total: total,
@@ -1214,7 +1102,7 @@ function showCustomizeModal() {
                 total: order.total,
                 phone: phone,
                 address: address,
-                paymentMethod: paymentMethod,
+                paymentMethod: 'TBD',
                 customText: text,
                 customImage: imageBase64,
                 email: user.email,
@@ -1226,7 +1114,6 @@ function showCustomizeModal() {
         console.error("Custom order sync failed:", e);
         res = { error: e.message };
     }
-
 
     if (res.error) {
         showFlash('Error submitting custom request: ' + res.error, 'error');

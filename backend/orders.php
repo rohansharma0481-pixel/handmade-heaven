@@ -195,6 +195,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             sendJSON(['error' => 'Failed to update extra charge.'], 500);
         }
     }
+
+    if ($action === 'updateDeliveryDate') {
+        $input = json_decode(file_get_contents('php://input'), true);
+        $orderId = $input['orderId'] ?? null;
+        $deliveryDate = trim($input['deliveryDate'] ?? '');
+
+        if (!$orderId) {
+            sendJSON(['error' => 'Missing Order ID.'], 400);
+        }
+
+        $stmt = $pdo->prepare("UPDATE orders SET delivery_date = ? WHERE id = ?");
+        if ($stmt->execute([$deliveryDate, $orderId])) {
+            sendJSON(['success' => true]);
+        } else {
+            sendJSON(['error' => 'Failed to update delivery date.'], 500);
+        }
+    }
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {

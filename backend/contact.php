@@ -59,7 +59,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $messages[] = ['sender' => 'artisan', 'text' => $reply, 'created_at' => date('Y-m-d H:i:s')];
             $conversationJson = json_encode($messages);
 
-            $stmt = $pdo->prepare("UPDATE contact_queries SET reply = ?, conversation = ? WHERE id = ?");
+            $stmt = $pdo->prepare("UPDATE contact_queries SET reply = ?, conversation = ?, created_at = CURRENT_TIMESTAMP WHERE id = ?");
             $stmt->execute([$reply, $conversationJson, $id]);
             sendJSON(['success' => true, 'message' => 'Reply saved successfully!']);
         } catch (Exception $e) {
@@ -94,7 +94,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $messages[] = ['sender' => 'customer', 'text' => $reply, 'created_at' => date('Y-m-d H:i:s')];
             $conversationJson = json_encode($messages);
 
-            $stmt = $pdo->prepare("UPDATE contact_queries SET conversation = ? WHERE id = ?");
+            $stmt = $pdo->prepare("UPDATE contact_queries SET conversation = ?, created_at = CURRENT_TIMESTAMP WHERE id = ?");
             $stmt->execute([$conversationJson, $id]);
             sendJSON(['success' => true, 'message' => 'Reply saved successfully!']);
         } catch (Exception $e) {
