@@ -77,7 +77,7 @@
       <a href="#">Shipping & Returns</a>
       <a href="#">FAQ</a>
       <a href="#">Size Guide</a>
-      <a href="../orders.html">Order Tracking</a>
+      <a href="../orders.html">Orders</a>
     </div>
     <div class="footer-col">
       <h4>OUR STORY</h4>
@@ -136,147 +136,167 @@
       : `<a href="login.html">Login</a><a href="signup.html">Create Account</a>`;
   }
 
-  const id = parseInt(new URLSearchParams(window.location.search).get('id'));
-  const product = Inventory.getById(id);
+  let product;
 
-  if (!product) {
-    document.getElementById('detail-root').innerHTML = `<div class="empty-state"><p>Product not found.</p><a href="products.html" class="btn-primary">Back to Shop</a></div>`;
-  } else {
-    document.title = `${product.name} | Handmade Heaven`;
-    const inWish = Wishlist.has(product.id);
-    const related = Inventory.get().filter(p => p.category === product.category && p.id !== product.id).slice(0, 3);
+  async function renderProduct() {
+    const id = parseInt(new URLSearchParams(window.location.search).get('id'));
+    product = Inventory.getById(id);
 
-    let stockHtml = '';
-    if (product.stock > 3) stockHtml = `<span class="in-stock">✓ In stock</span>`;
-    else if (product.stock > 0) stockHtml = `<span class="low-stock-warn">⚠ Only ${product.stock} left</span>`;
-    else stockHtml = `<span class="out-stock">✗ Out of stock</span>`;
+    if (!product) {
+      document.getElementById('detail-root').innerHTML = `<div class="empty-state"><p>Product not found.</p><a href="products.html" class="btn-primary">Back to Shop</a></div>`;
+    } else {
+      if (typeof Reviews !== 'undefined' && Reviews.load) {
+        await Reviews.load(product.id);
+      }
 
-    let relatedHtml = '';
-    if (related.length) {
-      relatedHtml = `
-        <section class="related-section">
-          <h2 class="section-title">More from ${product.category}</h2>
-          <div class="products-grid">
-            ${related.map(p => `
-              <div class="product-card">
-                <div class="product-img-wrap" onclick="window.location='product-detail.html?id=${p.id}'">
-                  <img src="${p.image}" alt="${p.name}" class="product-img" loading="lazy"/>
-                  <span class="product-category-tag">${p.category}</span>
-                </div>
-                <div class="product-info">
-                  ${p.stock <= 0 ? `<span class="out-stock-label">Out of Stock</span>` : (p.stock <= 3 ? `<span class="low-stock-label">Only ${p.stock} left</span>` : '')}
-                  <span class="product-name" onclick="window.location='product-detail.html?id=${p.id}'">${p.name}</span>
-                  <div class="product-footer">
-                    <span class="product-price">${fmt(p.price)}</span>
-                    <div class="product-actions">
-                      ${p.stock > 0 ? `
-                      <button class="btn-add-cart" onclick="addToCart(${p.id})">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
-                      </button>` : ''}
+      // Fetch Artisan Details
+      let artisanName = 'Mehakdeep Kaur';
+      try {
+        const artisanRes = await fetch(`../backend/sellers.php?action=get&id=${product.seller_id || 1}`);
+        const artisan = await artisanRes.json();
+        if (artisan && artisan.name) artisanName = artisan.name;
+      } catch(e) { console.error(e); }
+
+      document.title = `${product.name} | Handmade Heaven`;
+      const inWish = Wishlist.has(product.id);
+      const related = Inventory.get().filter(p => p.category === product.category && p.id !== product.id).slice(0, 3);
+
+      let stockHtml = '';
+      if (product.stock > 3) stockHtml = `<span class="in-stock">✓ In stock</span>`;
+      else if (product.stock > 0) stockHtml = `<span class="low-stock-warn">⚠ Only ${product.stock} left</span>`;
+      else stockHtml = `<span class="out-stock">✗ Out of stock</span>`;
+
+      let relatedHtml = '';
+      if (related.length) {
+        relatedHtml = `
+          <section class="related-section">
+            <h2 class="section-title">More from ${product.category}</h2>
+            <div class="products-grid">
+              ${related.map(p => `
+                <div class="product-card">
+                  <div class="product-img-wrap" onclick="window.location='product-detail.html?id=${p.id}'">
+                    <img src="${p.image}" alt="${p.name}" class="product-img" loading="lazy"/>
+                    <span class="product-category-tag">${p.category}</span>
+                  </div>
+                  <div class="product-info">
+                    ${p.stock <= 0 ? `<span class="out-stock-label">Out of Stock</span>` : (p.stock <= 3 ? `<span class="low-stock-label">Only ${p.stock} left</span>` : '')}
+                    <span class="product-name" onclick="window.location='product-detail.html?id=${p.id}'">${p.name}</span>
+                    <div class="product-footer">
+                      <span class="product-price">${fmt(p.price)}</span>
+                      <div class="product-actions">
+                        ${p.stock > 0 ? `
+                        <button class="btn-add-cart" onclick="addToCart(${p.id})">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+                        </button>` : ''}
+                      </div>
                     </div>
                   </div>
-                </div>
-              </div>`).join('')}
-          </div>
-        </section>`;
-    }
-
-    document.getElementById('detail-root').innerHTML = `
-      <div class="pd-breadcrumb">
-        <a href="products.html">Shop</a> /
-        <a href="products.html?category=${encodeURIComponent(product.category)}">${product.category}</a> /
-        <span>${product.name}</span>
-      </div>
-
-      <div class="pd-layout">
-        <div class="pd-image-wrap">
-          <img src="${product.image}" alt="${product.name}" class="pd-image"/>
-          <span class="product-category-tag">${product.category}</span>
-        </div>
-        <div class="pd-info">
-          <h1 class="pd-title">${product.name}</h1>
-          <p class="pd-price">${fmt(product.price)}</p>
-          <p class="pd-desc">${product.description}</p>
-          <div class="pd-stock">${stockHtml}</div>
-
-          ${product.stock > 0 ? `
-          <div class="pd-form">
-            <div class="qty-wrap">
-              <label>Qty</label>
-              <input type="number" id="qty-input" value="1" min="1" max="${product.stock}" class="qty-input"/>
+                </div>`).join('')}
             </div>
-            <button class="btn-primary btn-lg btn-block" onclick="addToCart()">Add to Cart</button>
-          </div>` : ''}
+          </section>`;
+      }
 
-          <button id="wish-btn" class="btn-outline btn-wishlist-lg ${inWish ? 'wishlisted' : ''}" onclick="toggleWish()">
-            <svg viewBox="0 0 24 24" fill="${inWish ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" width="18"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
-            <span id="wish-label">${inWish ? 'Saved to Wishlist' : 'Save to Wishlist'}</span>
-          </button>
+      document.getElementById('detail-root').innerHTML = `
+        <div class="pd-breadcrumb">
+          <a href="products.html">Shop</a> /
+          <a href="products.html?category=${encodeURIComponent(product.category)}">${product.category}</a> /
+          <span>${product.name}</span>
         </div>
-      </div>
 
-      <!-- Reviews Section -->
-      <section class="reviews-section" style="margin-top: 3rem; padding-top: 2rem; border-top: 1px solid var(--border);">
-        <h2 class="section-title" style="margin-bottom: 1.5rem;">Customer Reviews</h2>
-        
-        <div class="reviews-summary" style="display: flex; gap: 2rem; align-items: center; background: var(--bg-card); padding: 1.5rem; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 2rem;">
-          <div style="text-align: center;">
-            <span style="font-size: 3rem; font-weight: 700; color: var(--ink); line-height: 1;" id="avg-rating">${Reviews.getAverage(product.id)}</span>
-            <div style="color: #fbbf24; font-size: 1.2rem; margin-top: 0.5rem;" id="avg-stars">
-              ${'★'.repeat(Math.round(Reviews.getAverage(product.id)))}${'☆'.repeat(5 - Math.round(Reviews.getAverage(product.id)))}
-            </div>
-            <span style="font-size: 0.85rem; color: var(--muted); display: block; margin-top: 0.25rem;">Based on <span id="review-count">${Reviews.get(product.id).length}</span> reviews</span>
+        <div class="pd-layout">
+          <div class="pd-image-wrap">
+            <img src="${product.image}" alt="${product.name}" class="pd-image"/>
+            <span class="product-category-tag">${product.category}</span>
           </div>
+          <div class="pd-info">
+            <h1 class="pd-title">${product.name}</h1>
+            <p class="pd-price">${fmt(product.price)}</p>
+            <p class="pd-desc">${product.description}</p>
+            <p style="margin-top: 1rem; margin-bottom: 1rem; font-size: 0.95rem; color: var(--ink-light);">
+              Crafted by: <a href="artisan.html?id=${product.seller_id || 1}" style="color: #d28a8c; font-weight: 600; text-decoration: underline;">${artisanName}</a>
+            </p>
+            <div class="pd-stock">${stockHtml}</div>
+
+            ${product.stock > 0 ? `
+            <div class="pd-form">
+              <div class="qty-wrap">
+                <label>Qty</label>
+                <input type="number" id="qty-input" value="1" min="1" max="${product.stock}" class="qty-input"/>
+              </div>
+              <button class="btn-primary btn-lg btn-block" onclick="addToCart()">Add to Cart</button>
+            </div>` : ''}
+
+            <button id="wish-btn" class="btn-outline btn-wishlist-lg ${inWish ? 'wishlisted' : ''}" onclick="toggleWish()">
+              <svg viewBox="0 0 24 24" fill="${inWish ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" width="18"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
+              <span id="wish-label">${inWish ? 'Saved to Wishlist' : 'Save to Wishlist'}</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Reviews Section -->
+        <section class="reviews-section" style="margin-top: 3rem; padding-top: 2rem; border-top: 1px solid var(--border);">
+          <h2 class="section-title" style="margin-bottom: 1.5rem;">Customer Reviews</h2>
           
-          <div style="flex: 1;">
-            <button class="btn-primary" onclick="toggleReviewForm()">Write a Review</button>
+          <div class="reviews-summary" style="display: flex; gap: 2rem; align-items: center; background: var(--bg-card); padding: 1.5rem; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 2rem;">
+            <div style="text-align: center;">
+              <span style="font-size: 3rem; font-weight: 700; color: var(--ink); line-height: 1;" id="avg-rating">${Reviews.getAverage(product.id)}</span>
+              <div style="color: #fbbf24; font-size: 1.2rem; margin-top: 0.5rem;" id="avg-stars">
+                ${'★'.repeat(Math.round(Reviews.getAverage(product.id)))}${'☆'.repeat(5 - Math.round(Reviews.getAverage(product.id)))}
+              </div>
+              <span style="font-size: 0.85rem; color: var(--muted); display: block; margin-top: 0.25rem;">Based on <span id="review-count">${Reviews.get(product.id).length}</span> reviews</span>
+            </div>
+            
+            <div style="flex: 1;">
+              <button class="btn-primary" onclick="toggleReviewForm()">Write a Review</button>
+            </div>
           </div>
-        </div>
 
-        <!-- Write Review Form -->
-        <div id="review-form-container" style="display: none; background: var(--bg-card); padding: 1.5rem; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 2rem;">
-          <h3 style="margin-bottom: 1rem; color: var(--ink);">Write a Review</h3>
-          <form id="review-form" onsubmit="submitReview(event)">
-            <div class="form-group" style="margin-bottom: 1rem;">
-              <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: var(--muted);">Rating</label>
-              <div class="star-rating" style="display: flex; gap: 0.5rem; font-size: 1.5rem; color: #fbbf24; cursor: pointer;">
-                <span onclick="setRating(1)" class="star" id="star-1">★</span>
-                <span onclick="setRating(2)" class="star" id="star-2">★</span>
-                <span onclick="setRating(3)" class="star" id="star-3">★</span>
-                <span onclick="setRating(4)" class="star" id="star-4">★</span>
-                <span onclick="setRating(5)" class="star" id="star-5">★</span>
-              </div>
-              <input type="hidden" id="review-rating" value="5" required />
-            </div>
-            <div class="form-group" style="margin-bottom: 1rem;">
-              <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: var(--muted);">Your Review</label>
-              <textarea id="review-text" class="form-input" rows="4" placeholder="Share your thoughts about this product..." required style="width: 100%;"></textarea>
-            </div>
-            <button type="submit" class="btn-primary">Submit Review</button>
-          </form>
-        </div>
-
-        <!-- Reviews List -->
-        <div id="reviews-list" style="display: flex; flex-direction: column; gap: 1.5rem;">
-          ${Reviews.get(product.id).map(r => `
-            <div class="review-item" style="border-bottom: 1px solid var(--border); padding-bottom: 1.5rem;">
-              <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem;">
-                <div>
-                  <strong style="color: var(--ink); font-size: 1rem;">${r.name}</strong>
-                  <div style="color: #fbbf24; font-size: 0.9rem; margin-top: 0.25rem;">
-                    ${'★'.repeat(r.rating)}${'☆'.repeat(5 - r.rating)}
-                  </div>
+          <!-- Write Review Form -->
+          <div id="review-form-container" style="display: none; background: var(--bg-card); padding: 1.5rem; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 2rem;">
+            <h3 style="margin-bottom: 1rem; color: var(--ink);">Write a Review</h3>
+            <form id="review-form" onsubmit="submitReview(event)">
+              <div class="form-group" style="margin-bottom: 1rem;">
+                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: var(--muted);">Rating</label>
+                <div class="star-rating" style="display: flex; gap: 0.5rem; font-size: 1.5rem; color: #fbbf24; cursor: pointer;">
+                  <span onclick="setRating(1)" class="star" id="star-1">★</span>
+                  <span onclick="setRating(2)" class="star" id="star-2">★</span>
+                  <span onclick="setRating(3)" class="star" id="star-3">★</span>
+                  <span onclick="setRating(4)" class="star" id="star-4">★</span>
+                  <span onclick="setRating(5)" class="star" id="star-5">★</span>
                 </div>
-                <span style="font-size: 0.82rem; color: var(--muted);">${r.date}</span>
+                <input type="hidden" id="review-rating" value="5" required />
               </div>
-              <p style="color: var(--ink-light); font-size: 0.95rem; line-height: 1.6;">${r.text}</p>
-            </div>
-          `).join('')}
-        </div>
-      </section>
+              <div class="form-group" style="margin-bottom: 1rem;">
+                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: var(--muted);">Your Review</label>
+                <textarea id="review-text" class="form-input" rows="4" placeholder="Share your thoughts about this product..." required style="width: 100%;"></textarea>
+              </div>
+              <button type="submit" class="btn-primary">Submit Review</button>
+            </form>
+          </div>
 
-      ${relatedHtml}`;
+          <!-- Reviews List -->
+          <div id="reviews-list" style="display: flex; flex-direction: column; gap: 1.5rem;">
+            ${Reviews.get(product.id).map(r => `
+              <div class="review-item" style="border-bottom: 1px solid var(--border); padding-bottom: 1.5rem;">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem;">
+                  <div>
+                    <strong style="color: var(--ink); font-size: 1rem;">${r.name}</strong>
+                    <div style="color: #fbbf24; font-size: 0.9rem; margin-top: 0.25rem;">
+                      ${'★'.repeat(r.rating)}${'☆'.repeat(5 - r.rating)}
+                    </div>
+                  </div>
+                  <span style="font-size: 0.82rem; color: var(--muted);">${r.date}</span>
+                </div>
+                <p style="color: var(--ink-light); font-size: 0.95rem; line-height: 1.6;">${r.text}</p>
+              </div>
+            `).join('')}
+          </div>
+        </section>
+
+        ${relatedHtml}`;
+    }
   }
+  renderProduct();
 
   function addToCart(addId) {
     let targetId = product.id;
@@ -330,12 +350,12 @@
     }
   };
 
-  window.submitReview = function(e) {
+  window.submitReview = async function(e) {
     e.preventDefault();
     const rating = document.getElementById('review-rating').value;
     const text = document.getElementById('review-text').value;
     
-    Reviews.add(product.id, rating, text);
+    await Reviews.add(product.id, rating, text);
     
     const reviewsList = document.getElementById('reviews-list');
     const reviews = Reviews.get(product.id);

@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Seller Admin Portal | Handmade Heaven</title>
   <link rel="stylesheet" href="../css/style.css"/>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     .admin-container { max-width: 1000px; margin: 4rem auto; padding: 0 1.5rem; text-align: center; }
     .page-title { font-size: 2.2rem; font-weight: 700; color: var(--ink); margin-bottom: 0.5rem; }
@@ -33,83 +34,316 @@
 </header>
 
 <main class="admin-container">
-  <h1 class="page-title">Handmade Heaven Admin Portal</h1>
-  <p class="page-subtitle">Manage your inventory, process orders, and reply to client requests.</p>
-  
-  <!-- Stats Section -->
-  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-bottom: 3rem;">
-    <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:12px; padding:1.5rem; box-shadow:var(--shadow);">
-      <h4 style="font-size:0.85rem; color:var(--muted); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.5rem;">Listed Products</h4>
-      <p id="stat-products" style="font-size:2rem; font-weight:700; color:var(--primary);">Loading...</p>
-    </div>
-    <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:12px; padding:1.5rem; box-shadow:var(--shadow);">
-      <h4 style="font-size:0.85rem; color:var(--muted); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.5rem;">Total Orders</h4>
-      <p id="stat-orders" style="font-size:2rem; font-weight:700; color:var(--primary);">Loading...</p>
-    </div>
-    <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:12px; padding:1.5rem; box-shadow:var(--shadow);">
-      <h4 style="font-size:0.85rem; color:var(--muted); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.5rem;">Estimated Revenue</h4>
-      <p id="stat-revenue" style="font-size:2rem; font-weight:700; color:var(--sage);">Loading...</p>
+  <!-- Step 1: Login Form -->
+  <div id="admin-login-box" style="max-width: 400px; margin: 0 auto; background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 2.5rem 2rem; box-shadow: var(--shadow); display: none;">
+    <h2 style="font-family: 'Playfair Display', serif; font-size: 1.6rem; color: var(--ink); margin-bottom: 0.5rem;">Admin Login (Step 1)</h2>
+    <p style="font-size: 0.9rem; color: var(--muted); margin-bottom: 1.5rem;">Enter your email and password to continue.</p>
+    <form id="admin-login-form" onsubmit="handleAdminLogin(event)">
+      <div class="form-group" style="margin-bottom: 1.2rem; text-align: left;">
+        <label style="display:block; margin-bottom:0.4rem; font-size:0.85rem; font-weight:600; color:var(--ink);">Email Address</label>
+        <input type="email" id="admin-email" class="form-input" required placeholder="admin@example.com" />
+      </div>
+      <div class="form-group" style="margin-bottom: 1.5rem; text-align: left;">
+        <label style="display:block; margin-bottom:0.4rem; font-size:0.85rem; font-weight:600; color:var(--ink);">Password</label>
+        <input type="password" id="admin-password" class="form-input" required placeholder="••••••••" />
+      </div>
+      <button type="submit" class="btn-primary btn-block">Verify Credentials →</button>
+    </form>
+  </div>
+
+  <!-- Step 2: Voice Verification -->
+  <div id="admin-voice-box" style="max-width: 400px; margin: 0 auto; background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 2.5rem 2rem; box-shadow: var(--shadow); display: none; text-align: center;">
+    <h2 style="font-family: 'Playfair Display', serif; font-size: 1.6rem; color: var(--ink); margin-bottom: 0.5rem;">Voice Check (Step 2)</h2>
+    <p style="font-size: 0.9rem; color: var(--muted); margin-bottom: 1.5rem;">Credentials verified! Now say the passphrase to unlock.</p>
+    
+    <div style="margin: 2rem 0;">
+      <button type="button" class="btn-primary" onclick="startVoiceLogin()" style="border-radius: 50%; width: 100px; height: 100px; font-size: 2.5rem; display: inline-flex; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(210,138,140,0.4);" id="voice-trigger-btn">
+        <span id="voice-icon">🎤</span>
+      </button>
+      <p id="voice-text" style="margin-top: 1rem; font-weight: 600; color: var(--primary);">Tap Mic & Speak "Open Admin"</p>
     </div>
   </div>
 
-  <div class="admin-grid">
+  <!-- Dashboard Content -->
+  <div id="admin-dashboard" style="display: none;">
+    <h1 class="page-title">Handmade Heaven Admin Portal</h1>
+    <p class="page-subtitle">Manage your inventory, process orders, and reply to client requests.</p>
     
-    <div class="admin-card">
-      <div class="card-icon">🛍️</div>
-      <div>
-        <h3 class="card-title">Product Manager</h3>
-        <p class="card-desc">Edit product names, stock, prices, categories, or upload new creations.</p>
+    <!-- Stats Section -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-bottom: 3rem;">
+      <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:12px; padding:1.5rem; box-shadow:var(--shadow);">
+        <h4 style="font-size:0.85rem; color:var(--muted); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.5rem;">Listed Products</h4>
+        <p id="stat-products" style="font-size:2rem; font-weight:700; color:var(--primary);">Loading...</p>
       </div>
-      <a href="admin-products.html" class="btn-primary" style="width: 100%;">Go to Products</a>
+      <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:12px; padding:1.5rem; box-shadow:var(--shadow);">
+        <h4 style="font-size:0.85rem; color:var(--muted); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.5rem;">Total Orders</h4>
+        <p id="stat-orders" style="font-size:2rem; font-weight:700; color:var(--primary);">Loading...</p>
+      </div>
+      <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:12px; padding:1.5rem; box-shadow:var(--shadow);">
+        <h4 style="font-size:0.85rem; color:var(--muted); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.5rem;">Estimated Revenue</h4>
+        <p id="stat-revenue" style="font-size:2rem; font-weight:700; color:var(--sage);">Loading...</p>
+      </div>
     </div>
 
-    <div class="admin-card">
-      <div class="card-icon">📦</div>
-      <div>
-        <h3 class="card-title">Orders Dashboard</h3>
-        <p class="card-desc">View customer purchases, assign extra work charges, and change order status.</p>
+    <!-- Charts Section -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem; margin-bottom: 3rem;">
+      <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:12px; padding:1.5rem; box-shadow:var(--shadow);">
+        <h3 style="font-size:1.1rem; color:var(--ink); margin-bottom:1rem;">Monthly Revenue</h3>
+        <canvas id="revenueChart" style="max-height: 250px;"></canvas>
       </div>
-      <a href="admin-orders.html" class="btn-primary" style="width: 100%;">Go to Orders</a>
+      <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:12px; padding:1.5rem; box-shadow:var(--shadow);">
+        <h3 style="font-size:1.1rem; color:var(--ink); margin-bottom:1rem;">Best Sellers</h3>
+        <canvas id="bestSellersChart" style="max-height: 250px;"></canvas>
+      </div>
     </div>
 
-    <div class="admin-card">
-      <div class="card-icon">💬</div>
-      <div>
-        <h3 class="card-title">Client Queries</h3>
-        <p class="card-desc">Answer questions from customers and process custom artwork quotes.</p>
+    <div class="admin-grid">
+      <div class="admin-card">
+        <div class="card-icon">🛍️</div>
+        <div>
+          <h3 class="card-title">Product Manager</h3>
+          <p class="card-desc">Edit product names, stock, prices, categories, or upload new creations.</p>
+        </div>
+        <a href="admin-products.html" class="btn-primary" style="width: 100%;">Go to Products</a>
       </div>
-      <a href="admin-queries.html" class="btn-primary" style="width: 100%;">Go to Queries</a>
-    </div>
 
+      <div class="admin-card">
+        <div class="card-icon">📦</div>
+        <div>
+          <h3 class="card-title">Orders Dashboard</h3>
+          <p class="card-desc">View customer purchases, assign extra work charges, and change order status.</p>
+        </div>
+        <a href="admin-orders.html" class="btn-primary" style="width: 100%;">Go to Orders</a>
+      </div>
+
+      <div class="admin-card">
+        <div class="card-icon">💬</div>
+        <div>
+          <h3 class="card-title">Client Queries</h3>
+          <p class="card-desc">Answer questions from customers and process custom artwork quotes.</p>
+        </div>
+        <a href="admin-queries.html" class="btn-primary" style="width: 100%;">Go to Queries</a>
+      </div>
+
+      <div class="admin-card">
+        <div class="card-icon">🎟️</div>
+        <div>
+          <h3 class="card-title">Coupon Manager</h3>
+          <p class="card-desc">Create and manage promo codes, discounts, and expiry dates.</p>
+        </div>
+        <a href="admin-coupons.html" class="btn-primary" style="width: 100%;">Go to Coupons</a>
+      </div>
+
+      <div class="admin-card">
+        <div class="card-icon">👩‍🎨</div>
+        <div>
+          <h3 class="card-title">Artisan Manager</h3>
+          <p class="card-desc">Add new sellers/artisans and manage their profiles.</p>
+        </div>
+        <a href="admin-sellers.html" class="btn-primary" style="width: 100%;">Go to Artisans</a>
+      </div>
+    </div>
+    
+    <button class="btn-outline" style="margin-top: 2rem;" onclick="adminLogout()">Logout</button>
   </div>
 </main>
 
 <script>
+  let tempAdminData = null;
+
+  function checkAdminAuth() {
+    const admin = localStorage.getItem('ac_admin');
+    if (admin) {
+      document.getElementById('admin-login-box').style.display = 'none';
+      document.getElementById('admin-voice-box').style.display = 'none';
+      document.getElementById('admin-dashboard').style.display = 'block';
+      loadStats();
+    } else {
+      document.getElementById('admin-login-box').style.display = 'block';
+      document.getElementById('admin-voice-box').style.display = 'none';
+      document.getElementById('admin-dashboard').style.display = 'none';
+    }
+  }
+
+  async function handleAdminLogin(e) {
+    e.preventDefault();
+    const email = document.getElementById('admin-email').value.trim();
+    const password = document.getElementById('admin-password').value;
+
+    try {
+      const res = await fetch('../backend/auth.php?action=admin_login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+      const data = await res.json();
+      if (data.success) {
+        tempAdminData = data.admin;
+        document.getElementById('admin-login-box').style.display = 'none';
+        document.getElementById('admin-voice-box').style.display = 'block';
+      } else {
+        alert(data.error || 'Login failed.');
+      }
+    } catch (err) {
+      alert('Error connecting to backend.');
+    }
+  }
+
+  function startVoiceLogin() {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert("Your browser does not support Voice Recognition. Please use Chrome or Edge.");
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'en-US';
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+
+    const voiceBtnText = document.getElementById('voice-text');
+    const voiceBtnIcon = document.getElementById('voice-icon');
+
+    voiceBtnText.textContent = "Listening... Speak now";
+    voiceBtnIcon.textContent = "🔴";
+
+    recognition.start();
+
+    recognition.onresult = async function(event) {
+      const speechToText = event.results[0][0].transcript.toLowerCase();
+      console.log('Heard:', speechToText);
+      voiceBtnText.textContent = `Heard: "${speechToText}"`;
+      voiceBtnIcon.textContent = "🎤";
+
+      if (speechToText.includes('open admin') || speechToText.includes('admin') || speechToText.includes('open')) {
+        if (tempAdminData) {
+          localStorage.setItem('ac_admin', JSON.stringify(tempAdminData));
+          alert("Voice Recognized! Welcome Admin.");
+          checkAdminAuth();
+        } else {
+          alert("Please verify email and password first.");
+          checkAdminAuth();
+        }
+      } else {
+        alert(`Incorrect passphrase: "${speechToText}". Try saying "Open Admin".`);
+        voiceBtnText.textContent = "Tap Mic & Speak \"Open Admin\"";
+      }
+    };
+
+    recognition.onerror = function(event) {
+      console.error('Speech recognition error', event.error);
+      alert("Voice recognition error: " + event.error);
+      voiceBtnText.textContent = "Login with Voice (\"Open Admin\")";
+      voiceBtnIcon.textContent = "🎤";
+    };
+
+    recognition.onspeechend = function() {
+      recognition.stop();
+    };
+  }
+
+  function adminLogout() {
+    localStorage.removeItem('ac_admin');
+    checkAdminAuth();
+  }
+
   async function loadStats() {
     try {
-      // Products
       const prodRes = await fetch('../backend/products.php?action=get');
       const products = await prodRes.json();
       document.getElementById('stat-products').textContent = products.length || 0;
 
-      // Orders
       const orderRes = await fetch('../backend/orders.php?action=getAll');
       const orders = await orderRes.json();
       document.getElementById('stat-orders').textContent = orders.length || 0;
 
-      // Revenue
       let revenue = 0;
       orders.forEach(o => {
-        if (o.status !== 'Cancelled') {
+        if (o.payment_status === 'Paid' && o.status !== 'Cancelled') {
           revenue += parseFloat(o.total || 0) + parseFloat(o.extra_charge || 0);
         }
       });
       document.getElementById('stat-revenue').textContent = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 0 }).format(revenue);
+      
+      // Load Analytics Charts
+      loadAnalytics();
     } catch (e) {
       console.error(e);
     }
   }
-  loadStats();
+
+  async function loadAnalytics() {
+    try {
+      const res = await fetch('../backend/analytics.php?action=getStats');
+      const data = await res.json();
+      if (!data.success) return;
+
+      // Revenue Chart
+      const revLabels = data.revenue.map(r => r.month);
+      const revValues = data.revenue.map(r => parseFloat(r.revenue));
+      
+      const ctxRev = document.getElementById('revenueChart').getContext('2d');
+      new Chart(ctxRev, {
+        type: 'line',
+        data: {
+          labels: revLabels,
+          datasets: [{
+            label: 'Revenue (₹)',
+            data: revValues,
+            borderColor: '#d28a8c',
+            backgroundColor: 'rgba(210, 138, 140, 0.1)',
+            borderWidth: 2,
+            fill: true
+          }]
+        },
+        options: { responsive: true, scales: { y: { beginAtZero: true } } }
+      });
+
+      // Best Sellers Chart
+      const prodLabels = data.bestSellers.map(p => p.name);
+      const prodValues = data.bestSellers.map(p => parseInt(p.units_sold));
+      const totalUnits = prodValues.reduce((a, b) => a + b, 0);
+      const prodPercentages = prodValues.map(v => totalUnits > 0 ? ((v / totalUnits) * 100).toFixed(1) : 0);
+      
+      const ctxProd = document.getElementById('bestSellersChart').getContext('2d');
+      new Chart(ctxProd, {
+        type: 'bar',
+        data: {
+          labels: prodLabels,
+          datasets: [{
+            label: '% of Total Sales',
+            data: prodPercentages,
+            backgroundColor: '#a3b899',
+            borderWidth: 1
+          }]
+        },
+        options: { 
+          responsive: true, 
+          scales: { 
+            y: { 
+              beginAtZero: true,
+              ticks: {
+                callback: function(value) { return value + '%'; }
+              }
+            } 
+          },
+          plugins: {
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  return context.parsed.y + '% of total sales';
+                }
+              }
+            }
+          }
+        }
+      });
+    } catch (e) {
+      console.error('Failed to load analytics charts', e);
+    }
+  }
+
+  checkAdminAuth();
 </script>
 
 </body>

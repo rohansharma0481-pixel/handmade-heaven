@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Meet the Artisan | Handmade Heaven</title>
+  <link rel="stylesheet" href="../css/style.css"/>
+  <style>
+    .artisan-profile { max-width: 800px; margin: 3rem auto; padding: 2rem; background: var(--bg-card); border-radius: 12px; border: 1px solid var(--border); display: flex; gap: 2rem; align-items: center; box-shadow: var(--shadow); }
+    .artisan-img { width: 150px; height: 150px; border-radius: 50%; object-fit: cover; border: 3px solid var(--primary-light); }
+    .artisan-info { flex: 1; }
+    .artisan-name { font-size: 2rem; font-weight: 700; color: var(--ink); margin-bottom: 0.5rem; font-family: 'Playfair Display', serif; }
+    .artisan-bio { font-size: 1rem; color: var(--muted); line-height: 1.6; margin-bottom: 1rem; }
+    
+    .artisan-products-title { text-align: center; font-size: 1.8rem; font-weight: 700; color: var(--ink); margin: 3rem 0 1.5rem; font-family: 'Playfair Display', serif; }
+  </style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="header-inner">
+    <div class="header-left">
+      <a href="../index.html" class="logo-wrapper">
+        <img src="../images/logo.png" alt="Handmade Heaven Logo" class="logo-img" style="height: 60px; width: auto; object-fit: contain;" />
+      </a>
+      <nav class="main-nav">
+        <a href="../index.html">Home</a>
+        <a href="products.html">Shop</a>
+        <a href="wishlist.html">Wishlist</a>
+        <a href="orders.html">Orders</a>
+      </nav>
+    </div>
+  </div>
+</header>
+
+<main class="page-inner">
+  <div id="artisan-loading" style="text-align: center; padding: 3rem;">
+    <p style="font-size: 1.2rem; color: var(--muted);">Loading Artisan Profile...</p>
+  </div>
+
+  <div id="artisan-content" style="display: none;">
+    <div class="artisan-profile">
+      <img id="artisan-avatar" src="../images/placeholder.jpg" alt="Artisan" class="artisan-img" />
+      <div class="artisan-info">
+        <h1 id="artisan-title" class="artisan-name">Artisan Name</h1>
+        <p id="artisan-desc" class="artisan-bio">Artisan Bio goes here.</p>
+        <span style="background: rgba(210,138,140,0.15); color: var(--primary); padding: 0.4rem 1rem; border-radius: 20px; font-size: 0.85rem; font-weight: 600;">Verified Artisan</span>
+      </div>
+    </div>
+
+    <h2 class="artisan-products-title">Creations by this Artisan</h2>
+    <div class="products-grid" id="artisan-products-grid"></div>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="footer-bottom" style="text-align: center; padding: 2rem;">
+    <p>&copy; 2026 HAND MADE HEAVEN. All Rights Reserved.</p>
+  </div>
+</footer>
+
+<script src="../js/store.js?v=3"></script>
+<script>
+  async function loadArtisan() {
+    const params = new URLSearchParams(window.location.search);
+    let id = params.get('id');
+
+    try {
+      // 1. Load Artisan Details
+      let res = await fetch(id ? `../backend/sellers.php?action=get&id=${id}` : `../backend/sellers.php?action=get`);
+      let artisan = await res.json();
+      
+      // If returning an array (no ID passed) or error (ID not found), try getting the first seller
+      if (Array.isArray(artisan) && artisan.length > 0) {
+        artisan = artisan[0];
+        id = artisan.id;
+      } else if (artisan.error || !artisan.id) {
+        // Fallback to first available seller if the specific ID wasn't found
+        res = await fetch(`../backend/sellers.php?action=get`);
+        const allArtisans = await res.json();
+        if (Array.isArray(allArtisans) && allArtisans.length > 0) {
+            artisan = allArtisans[0];
+            id = artisan.id;
+        } else {
+            document.getElementById('artisan-loading').innerHTML = `<p style="color:red;">Artisan not found and no artisans available.</p>`;
+            return;
+        }
+      }
+
+      document.getElementById('artisan-title').textContent = artisan.name;
+      document.getElementById('artisan-desc').textContent = artisan.bio;
+      if (artisan.image) {
+        document.getElementById('artisan-avatar').src = artisan.image.startsWith('http') ? artisan.image : `../${artisan.image}`;
+      }
+
+      // 2. Load Artisan Products
+      const prodRes = await fetch(`../backend/products.php?action=get&seller_id=${id}`);
+      const products = await prodRes.json();
+
+      const grid = document.getElementById('artisan-products-grid');
+      if (!products.length) {
+        grid.innerHTML = `<p style="grid-column: 1/-1; text-align: center; color: var(--muted);">No products found for this artisan.</p>`;
+      } else {
+        grid.innerHTML = products.map(p => `
+          <div class="product-card">
+            <div class="product-img-wrap" onclick="window.location='product-detail.html?id=${p.id}'">
+              <img src="../${p.image}" alt="${p.name}" class="product-img"/>
+              <span class="product-category-tag">${p.category}</span>
+            </div>
+            <div class="product-info">
+              <span class="product-name" onclick="window.location='product-detail.html?id=${p.id}'">${p.name}</span>
+              <div class="product-footer">
+                <span class="product-price">${fmt(p.price)}</span>
+                <button class="btn-add-cart" onclick="addToCart(${p.id})">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        `).join('');
+      }
+
+      document.getElementById('artisan-loading').style.display = 'none';
+      document.getElementById('artisan-content').style.display = 'block';
+
+    } catch (e) {
+      console.error(e);
+      document.getElementById('artisan-loading').innerHTML = `<p style="color:red;">Failed to load data.</p>`;
+    }
+  }
+
+  function addToCart(id) {
+    Cart.add(id, 1);
+    alert('Added to cart!');
+  }
+
+  loadArtisan();
+</script>
+</body>
+</html>

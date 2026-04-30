@@ -324,6 +324,25 @@
               </div>
               ${order.delivery_date ? `<p style="margin-top:0.5rem; font-size:0.8rem; color:var(--sage); font-weight:500;">✅ Delivery date set: <strong>${order.delivery_date}</strong></p>` : ''}
             </div>
+
+            <!-- Payment Section -->
+            <div style="margin-top:1rem; padding:1.2rem; background:linear-gradient(135deg,rgba(40,167,69,0.06),rgba(40,167,69,0.1)); border:1.5px solid #28a745; border-radius:10px;">
+              <h4 style="font-size:0.85rem; color:#28a745; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.8rem;">💵 Payment Status</h4>
+              ${order.payment_status === 'Paid' ? `
+                <p style="font-size:0.95rem; color:#155724; font-weight:600;">✅ Payment Received</p>
+                <p style="font-size:0.85rem; color:var(--muted);">Details: ${order.payment_details}</p>
+              ` : `
+                <div style="display:flex; align-items:center; gap:0.75rem; flex-wrap:wrap;">
+                  <input type="text" id="paydetails-${order.id}" placeholder="e.g., UPI, GPay, Bank Transfer" 
+                    style="padding:0.4rem 0.6rem; border:1.5px solid #28a745; border-radius:6px; font-size:0.95rem; font-weight:600; color:var(--ink); width:200px;"
+                  />
+                  <button onclick="markPaymentDone('${order.id}')"
+                    style="background:#28a745; color:#fff; border:none; border-radius:8px; padding:0.45rem 1rem; font-size:0.85rem; font-weight:600; cursor:pointer;">
+                    Mark Payment as Done
+                  </button>
+                </div>
+              `}
+            </div>
             
             <div class="order-total">
               Total Bill: ${fmt(order.total)}
@@ -429,6 +448,31 @@
           loadOrders();
         } else {
           alert('Error: ' + data.error);
+        }
+      } catch (err) {
+        alert('Error connecting to server.');
+      }
+    }
+
+    async function markPaymentDone(orderId) {
+      const input = document.getElementById('paydetails-' + orderId);
+      const paymentDetails = input ? input.value.trim() : '';
+      if (!paymentDetails) {
+        alert('Please enter payment details (e.g., GPay, UPI, Cash).');
+        return;
+      }
+      try {
+        const res = await fetch('../backend/orders.php?action=markPaid', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ orderId, paymentDetails })
+        });
+        const data = await res.json();
+        if (data.success) {
+          alert('✅ Payment marked as done! Total Revenue will now update.');
+          loadOrders();
+        } else {
+          alert('Error: ' + (data.error || 'Failed to mark as paid'));
         }
       } catch (err) {
         alert('Error connecting to server.');

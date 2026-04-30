@@ -26,7 +26,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'add') {
         $input = json_decode(file_get_contents('php://input'), true);
 
-        $productId = $input['productId'] ?? null;
+        $productId = isset($input['productId']) ? (int)$input['productId'] : null;
         $name = trim($input['name'] ?? 'Guest');
         $rating = (int)($input['rating'] ?? 5);
         $text = trim($input['text'] ?? '');

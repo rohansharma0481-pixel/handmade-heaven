@@ -191,7 +191,7 @@
       <a href="#">Shipping & Returns</a>
       <a href="#">FAQ</a>
       <a href="#">Size Guide</a>
-      <a href="../orders.html">Order Tracking</a>
+      <a href="../orders.html">Orders</a>
     </div>
     <div class="footer-col">
       <h4>OUR STORY</h4>
@@ -250,7 +250,7 @@
       : `<a href="login.html">Login</a><a href="signup.html">Create Account</a>`;
   }
 
-  function renderCart() {
+  async function renderCart() {
     const items = Cart.getWithProducts();
     const root = document.getElementById('cart-root');
     if (!items.length) {
@@ -259,7 +259,18 @@
     }
     const total = Cart.total();
     const shipping = total > 200 ? 20 : 0;
-    const grandTotal = total + shipping;
+    const discount = window.currentDiscount || 0;
+    const grandTotal = Math.max(0, total + shipping - discount);
+
+    // Fetch available coupons
+    let availableCoupons = [];
+    try {
+      const res = await fetch('../backend/coupons.php?action=list');
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        availableCoupons = data.filter(c => !c.expiry_date || new Date(c.expiry_date) >= new Date().setHours(0,0,0,0));
+      }
+    } catch(e) { console.error(e); }
 
     root.innerHTML = `
       <div class="cart-layout">
@@ -287,7 +298,28 @@
           <h2 class="summary-title">Order Summary</h2>
           <div class="summary-row"><span>Subtotal</span><span>${fmt(total)}</span></div>
           <div class="summary-row"><span>Shipping</span><span>${shipping === 0 ? 'Free' : fmt(shipping)}</span></div>
+          ${discount > 0 ? `<div class="summary-row" style="color:var(--terracotta); font-weight:600;"><span>Discount (${window.appliedCoupon})</span><span>-${fmt(discount)}</span></div>` : ''}
           <div class="summary-row summary-total"><span>Total</span><span>${fmt(grandTotal)}</span></div>
+          
+          <div class="coupon-section" style="margin-top: 1.5rem; padding: 1.2rem; background: #f9fafb; border-radius: 12px; border: 1px solid var(--border); text-align: left;">
+            <label style="display:block; font-size:0.9rem; font-weight:700; color:var(--ink); margin-bottom:0.75rem;">Have a promo code?</label>
+            
+            <div style="display:flex; gap:0.5rem; align-items: stretch; margin-bottom: 1rem;">
+              <input type="text" id="coupon-code" class="form-input" placeholder="E.G. WELCOME10" style="text-transform: uppercase; flex: 1; min-width: 0;" value="${window.appliedCoupon || ''}" />
+              <button class="btn-primary" type="button" onclick="applyCoupon()" style="padding: 0 1.5rem; flex-shrink: 0;">APPLY</button>
+            </div>
+            
+            <p id="coupon-msg" style="font-size:0.85rem; margin-bottom:1rem; font-weight: 600; display:none;"></p>
+
+            <div id="available-coupons" style="border-top: 1px solid var(--border); padding-top: 0.75rem;">
+              <label style="display:block; font-size:0.8rem; font-weight:600; color:var(--muted); margin-bottom:0.5rem;">Or select an available coupon:</label>
+              <select id="coupon-dropdown" class="form-input" onchange="if(this.value) { document.getElementById('coupon-code').value=this.value; applyCoupon(); }" style="width: 100%; cursor: pointer;">
+                <option value="">-- Click to view available coupons --</option>
+                ${availableCoupons.map(c => `<option value="${c.code}" ${window.appliedCoupon === c.code ? 'selected' : ''}>${c.code} (${c.type === 'percent' ? c.value+'%' : '₹'+parseFloat(c.value).toFixed(2)} OFF)</option>`).join('')}
+              </select>
+            </div>
+          </div>
+
           ${total > 200 ? `<p class="free-ship-hint" style="color:var(--terracotta);">₹20 shipping added for orders above ₹200</p>` : `<p class="free-ship-hint">Orders up to ₹200 — Free Shipping! 🎉</p>`}
           <button class="btn-primary btn-block btn-lg" style="margin-top:1rem" onclick="showCheckoutForm()">Proceed to Checkout</button>
           <a href="products.html" class="btn-text btn-block" style="text-align:center;margin-top:12px">← Continue Shopping</a>
@@ -378,7 +410,12 @@
                 <div class="pc-expanded" id="details-UPI">
                   <div style="text-align:center;">
                     <p style="margin-bottom: 0.5rem; font-weight: 500;">Scan to Pay: ${fmt(grandTotal)}</p>
-                    <img src="https://chart.googleapis.com/chart?chs=200x200&cht=qr&chl=upi://pay?pa=store@upi%26pn=HandmadeHeaven%26am=${grandTotal}" alt="UPI QR Code" style="max-width:200px; width:100%; height:auto; display:inline-block;" />
+                    <p style="margin-bottom: 0.5rem; font-size: 0.85rem; color: #dc2626; font-weight: 600;">Scan QR to pay and enter UTR Number below.</p>
+                    <img src="../images/upi.png" alt="UPI QR Code" style="max-width:200px; width:100%; height:auto; display:inline-block; border: 1px solid #e5e7eb; border-radius: 8px; margin-bottom: 1rem;" />
+                    <div class="form-group" style="margin-top: 0.5rem; text-align: left;">
+                      <label style="display:block; margin-bottom:0.3rem; font-size:0.85rem; font-weight:600; color:var(--ink);">UTR Number / Transaction ID *</label>
+                      <input type="text" id="checkout-utr" class="form-input" placeholder="Enter 12-digit UTR Number" maxlength="12" oninput="this.value = this.value.replace(/[^0-9]/g, '')" />
+                    </div>
                   </div>
                 </div>
               </label>
@@ -523,7 +560,22 @@
         return;
     }
     const paymentMethod = selectedPayment.value;
-    const details = { phone, address, paymentMethod };
+    let utrNumber = '';
+    if (paymentMethod === 'UPI') {
+        utrNumber = document.getElementById('checkout-utr').value.trim();
+        if (!utrNumber || utrNumber.length < 12) {
+            alert('Please enter a valid 12-digit UTR Number for UPI payment.');
+            return;
+        }
+    }
+    const details = { 
+      phone, 
+      address, 
+      paymentMethod, 
+      utrNumber,
+      couponCode: window.appliedCoupon || null,
+      discountAmount: window.currentDiscount || 0
+    };
     const order = await Orders.place(details);
     if (order && order.error) {
       showFlash(order.error, 'error');
@@ -532,6 +584,44 @@
     if (order) {
       updateNavCart();
       window.location.href = `orders.html?new=${order.id}`;
+    }
+  };
+
+  window.applyCoupon = async function() {
+    const code = document.getElementById('coupon-code').value.trim();
+    const msg = document.getElementById('coupon-msg');
+    const total = Cart.total();
+
+    if (!code) {
+      msg.style.display = 'block';
+      msg.style.color = '#dc2626';
+      msg.textContent = 'Please enter a coupon code.';
+      return;
+    }
+
+    try {
+      const res = await fetch('../backend/coupons.php?action=validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code, cartTotal: total })
+      });
+      const data = await res.json();
+
+      msg.style.display = 'block';
+      if (data.success) {
+        window.currentDiscount = data.discount;
+        window.appliedCoupon = data.code;
+        msg.style.color = '#16a34a';
+        msg.textContent = `Coupon applied successfully! You saved ${fmt(data.discount)}`;
+        renderCart();
+      } else {
+        msg.style.color = '#dc2626';
+        msg.textContent = data.error || 'Failed to apply coupon.';
+      }
+    } catch (e) {
+      msg.style.display = 'block';
+      msg.style.color = '#dc2626';
+      msg.textContent = 'Error connecting to server.';
     }
   };
 

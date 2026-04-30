@@ -393,20 +393,20 @@ const Inventory = {
 // ── Auth ────────────────────────────────────────────────────
 const Auth = {
   signup(name, email, password) {
-    let users = JSON.parse(localStorage.getItem('ac_users') || '[]');
-    if (users.find(u => u.email === email)) return { error: 'Email already exists' };
-    const user = { id: Date.now(), name, email, password };
-    users.push(user);
-    localStorage.setItem('ac_users', JSON.stringify(users));
-    this.setSession(user);
-    return { success: true };
+    const res = apiCall('auth.php?action=signup', 'POST', { name, email, password });
+    if (res && res.success) {
+        this.setSession(res.user);
+        return { success: true };
+    }
+    return { error: (res && res.error) ? res.error : 'Signup failed' };
   },
   login(email, password) {
-    let users = JSON.parse(localStorage.getItem('ac_users') || '[]');
-    const user = users.find(u => u.email === email && u.password === password);
-    if (!user) return { error: 'Invalid email or password' };
-    this.setSession(user);
-    return { success: true };
+    const res = apiCall('auth.php?action=login', 'POST', { email, password });
+    if (res && res.success) {
+        this.setSession(res.user);
+        return { success: true };
+    }
+    return { error: (res && res.error) ? res.error : 'Invalid email or password' };
   },
   getSession() {
     return JSON.parse(localStorage.getItem("ac_session") || "null");
@@ -435,32 +435,59 @@ const Cart = {
     return s ? `ac_cart_${s.id}` : "ac_cart_guest";
   },
   get() {
+    const user = Auth.currentUser();
+    if (user && user.id) {
+        const res = apiCall(`cart.php?action=get&userId=${user.id}&item_type=cart`);
+        if (res && Array.isArray(res)) {
+            return res;
+        }
+    }
     return JSON.parse(localStorage.getItem(this.key()) || "[]");
   },
   save(items) {
     localStorage.setItem(this.key(), JSON.stringify(items));
   },
   add(productId, qty = 1) {
-    const items = this.get();
-    const existing = items.find((i) => i.productId === productId);
-    if (existing) existing.qty += qty;
-    else items.push({ productId, qty });
-    this.save(items);
+    const user = Auth.currentUser();
+    if (user && user.id) {
+        apiCall('cart.php?action=add', 'POST', { userId: user.id, productId, qty, item_type: 'cart' });
+    } else {
+        const items = this.get();
+        const existing = items.find((i) => i.productId === productId);
+        if (existing) existing.qty += qty;
+        else items.push({ productId, qty });
+        this.save(items);
+    }
   },
   update(productId, qty) {
-    let items = this.get();
-    if (qty <= 0) items = items.filter((i) => i.productId !== productId);
-    else {
-      const item = items.find((i) => i.productId === productId);
-      if (item) item.qty = qty;
+    const user = Auth.currentUser();
+    if (user && user.id) {
+        apiCall('cart.php?action=update', 'POST', { userId: user.id, productId, qty, item_type: 'cart' });
+    } else {
+        let items = this.get();
+        if (qty <= 0) items = items.filter((i) => i.productId !== productId);
+        else {
+          const item = items.find((i) => i.productId === productId);
+          if (item) item.qty = qty;
+        }
+        this.save(items);
     }
-    this.save(items);
   },
   remove(productId) {
-    this.save(this.get().filter((i) => i.productId !== productId));
+    const user = Auth.currentUser();
+    if (user && user.id) {
+        apiCall('cart.php?action=remove', 'POST', { userId: user.id, productId, item_type: 'cart' });
+    } else {
+        this.save(this.get().filter((i) => i.productId !== productId));
+    }
   },
   clear() {
-    localStorage.removeItem(this.key());
+    const user = Auth.currentUser();
+    if (user && user.id) {
+        apiCall('cart.php?action=clear', 'POST', { userId: user.id, item_type: 'cart' });
+    } else {
+        localStorage.removeItem(this.key());
+    }
   },
   count() {
     return this.get().reduce((s, i) => s + i.qty, 0);
@@ -488,6 +515,13 @@ const Wishlist = {
     return s ? `ac_wish_${s.id}` : "ac_wish_guest";
   },
   get() {
+    const user = Auth.currentUser();
+    if (user && user.id) {
+        const res = apiCall(`cart.php?action=get&userId=${user.id}&item_type=wishlist`);
+        if (res && Array.isArray(res)) {
+            return res.map(i => i.productId);
+        }
+    }
     return JSON.parse(localStorage.getItem(this.key()) || "[]");
   },
   save(ids) {
@@ -497,15 +531,32 @@ const Wishlist = {
     return this.get().includes(id);
   },
   toggle(id) {
+    const user = Auth.currentUser();
     const ids = this.get();
     const idx = ids.indexOf(id);
-    if (idx >= 0) ids.splice(idx, 1);
-    else ids.push(id);
-    this.save(ids);
-    return !ids.includes(id) ? false : true;
+    
+    if (user && user.id) {
+        if (idx >= 0) {
+            apiCall('cart.php?action=remove', 'POST', { userId: user.id, productId: id, item_type: 'wishlist' });
+            return false;
+        } else {
+            apiCall('cart.php?action=add', 'POST', { userId: user.id, productId: id, qty: 1, item_type: 'wishlist' });
+            return true;
+        }
+    } else {
+        if (idx >= 0) ids.splice(idx, 1);
+        else ids.push(id);
+        this.save(ids);
+        return !ids.includes(id) ? false : true;
+    }
   },
   remove(id) {
-    this.save(this.get().filter((i) => i !== id));
+    const user = Auth.currentUser();
+    if (user && user.id) {
+        apiCall('cart.php?action=remove', 'POST', { userId: user.id, productId: id, item_type: 'wishlist' });
+    } else {
+        this.save(this.get().filter((i) => i !== id));
+    }
   },
   getProducts() {
     return this.get()
@@ -567,12 +618,15 @@ const Orders = {
     const user = Auth.currentUser();
     if (!user) return { error: "Please log in to place an order." };
 
+    const discount = details.discountAmount || 0;
     const orderData = {
         id: Date.now(),
         user_id: user.id,
         date: new Date().toISOString().split('T')[0],
         status: 'pending_approval',
-        total: Cart.total(),
+        total: Math.max(0, Cart.total() - discount),
+        couponCode: details.couponCode || null,
+        discountAmount: discount,
         customer: {
             name: user.name,
             email: user.email,
@@ -603,6 +657,8 @@ const Orders = {
             paymentMethod: details.paymentMethod || 'COD',
             email: user.email,
             name: user.name,
+            couponCode: details.couponCode || null,
+            discountAmount: discount,
             items: items.map(i => ({
                 productId: i.productId,
                 qty: i.qty,
@@ -682,13 +738,13 @@ const Orders = {
     } catch(e) { console.error('updatePreview failed:', e); }
     return { success: true };
   },
-  async confirmAndPay(orderId, paymentMethod) {
+  async confirmAndPay(orderId, paymentMethod, utrNumber = '') {
     let orders = JSON.parse(localStorage.getItem('ac_orders') || '[]');
     const o = orders.find(o => o.id === parseInt(orderId));
-    if (o) { o.status = 'Processing'; if (o.customer) o.customer.paymentMethod = paymentMethod; localStorage.setItem('ac_orders', JSON.stringify(orders)); }
+    if (o) { o.status = 'Processing'; if (o.customer) { o.customer.paymentMethod = paymentMethod; o.customer.utrNumber = utrNumber; } localStorage.setItem('ac_orders', JSON.stringify(orders)); }
     try {
         const url = API_PREFIX + 'orders.php?action=confirmAndPay';
-        await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ orderId, status: 'Processing', paymentMethod }) });
+        await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ orderId, status: 'Processing', paymentMethod, utrNumber }) });
     } catch(e) { console.error('confirmAndPay failed:', e); }
     return { success: true };
   },
@@ -709,22 +765,71 @@ const Orders = {
 // ── Reviews ──────────────────────────────────────────────────
 const Reviews = {
   get(productId) {
-    let reviews = JSON.parse(localStorage.getItem('ac_reviews') || '[]');
-    let prodReviews = reviews.filter(r => r.productId === parseInt(productId));
-    if (!prodReviews.length) {
-        return [
-          { id: 1, name: "Aarav Sharma", rating: 5, text: "Absolutely loved the quality! Highly recommend.", date: "2026-04-10" },
-          { id: 2, name: "Sneha Patel", rating: 4, text: "Very pretty, but delivery took a day extra.", date: "2026-04-15" }
-        ];
+    let reviews = JSON.parse(localStorage.getItem('ac_reviews_' + productId) || '[]');
+    if (!reviews.length) {
+        let allReviews = JSON.parse(localStorage.getItem('ac_reviews') || '[]');
+        let prodReviews = allReviews.filter(r => r.productId === parseInt(productId));
+        if (!prodReviews.length) {
+            return [
+              { id: 1, name: "Aarav Sharma", rating: 5, text: "Absolutely loved the quality! Highly recommend.", date: "2026-04-10" },
+              { id: 2, name: "Sneha Patel", rating: 4, text: "Very pretty, but delivery took a day extra.", date: "2026-04-15" }
+            ];
+        }
+        return prodReviews;
     }
-    return prodReviews;
+    return reviews;
   },
-  add(productId, rating, text) {
+  async load(productId) {
+    try {
+      const url = getRootPath() + 'backend/reviews.php?action=get&productId=' + productId + '&t=' + Date.now();
+      const response = await fetch(url);
+      const data = await response.json();
+      if (Array.isArray(data) && !data.error) {
+        const mapped = data.map(r => ({
+          id: r.review_id || r.id,
+          productId: parseInt(r.product_id),
+          name: r.name,
+          rating: parseInt(r.rating),
+          text: r.text,
+          date: r.date
+        }));
+        localStorage.setItem('ac_reviews_' + productId, JSON.stringify(mapped));
+      }
+    } catch (e) {
+      console.error("Failed to load reviews from backend:", e);
+    }
+  },
+  async add(productId, rating, text) {
     const user = Auth.currentUser() || { name: "Guest" };
-    let reviews = JSON.parse(localStorage.getItem('ac_reviews') || '[]');
-    const review = { id: Date.now(), productId: parseInt(productId), name: user.name, rating: parseInt(rating), text, date: new Date().toISOString().split('T')[0] };
-    reviews.push(review);
-    localStorage.setItem('ac_reviews', JSON.stringify(reviews));
+    const review = { 
+      productId: parseInt(productId), 
+      name: user.name, 
+      rating: parseInt(rating), 
+      text, 
+      date: new Date().toISOString().split('T')[0] 
+    };
+
+    let cached = JSON.parse(localStorage.getItem('ac_reviews_' + productId) || '[]');
+    cached.push({ ...review, id: Date.now() });
+    localStorage.setItem('ac_reviews_' + productId, JSON.stringify(cached));
+
+    try {
+      const url = getRootPath() + 'backend/reviews.php?action=add';
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(review)
+      });
+      const resData = await response.json();
+      if (resData.success) {
+        await this.load(productId);
+      } else {
+        alert("Backend Error: " + (resData.error || "Failed to save review."));
+      }
+    } catch (e) {
+      console.error("Failed to save review to backend:", e);
+      alert("Network Error: Could not connect to the backend server.");
+    }
     return review;
   },
   getAverage(productId) {

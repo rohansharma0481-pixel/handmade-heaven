@@ -10,6 +10,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $name = trim($input['name'] ?? '');
         $email = trim($input['email'] ?? '');
         $password = $input['password'] ?? '';
+        $phone = trim($input['phone'] ?? '');
+        $address = trim($input['address'] ?? '');
 
         if (empty($name) || empty($email) || empty($password)) {
             sendJSON(['error' => 'All fields are required.'], 400);
@@ -30,8 +32,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
 
         // Insert user
-        $stmt = $pdo->prepare("INSERT INTO users (name, email, password) VALUES (?, ?, ?)");
-        $stmt->execute([$name, $email, $hashedPassword]);
+        $stmt = $pdo->prepare("INSERT INTO users (name, email, password, phone, address) VALUES (?, ?, ?, ?, ?)");
+        $stmt->execute([$name, $email, $hashedPassword, $phone, $address]);
 
         $userId = $pdo->lastInsertId();
         sendJSON([
@@ -67,6 +69,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ]);
         } else {
             sendJSON(['error' => 'Invalid email or password.'], 401);
+        }
+    }
+
+    if ($action === 'admin_login') {
+        $email = trim($input['email'] ?? '');
+        $password = $input['password'] ?? '';
+
+        if (empty($email) || empty($password)) {
+            sendJSON(['error' => 'Email and password are required.'], 400);
+        }
+
+        $stmt = $pdo->prepare("SELECT admin_id, admin_name, email, password FROM admin WHERE email = ?");
+        $stmt->execute([$email]);
+        $admin = $stmt->fetch();
+
+        if ($admin && ($password === $admin['password'] || password_verify($password, $admin['password']))) {
+            sendJSON([
+                'success' => true,
+                'admin' => [
+                    'id' => $admin['admin_id'],
+                    'name' => $admin['admin_name'],
+                    'email' => $admin['email']
+                ]
+            ]);
+        } else {
+            sendJSON(['error' => 'Invalid admin email or password.'], 401);
         }
     }
 }

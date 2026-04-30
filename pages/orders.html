@@ -78,6 +78,18 @@
     .pay-modal-actions .btn-primary { flex: 2; }
     .status-cancelled { background: #fee2e2 !important; color: #dc2626 !important; border-color: #fca5a5 !important; }
     .approval-actions { display: flex; gap: 0.6rem; flex-wrap: wrap; }
+    
+    /* Order Tracker Timeline */
+    .order-tracker { margin-top: 2rem; padding: 1.5rem; background: #f9fafb; border-radius: 12px; border: 1px solid var(--border); }
+    .tracker-steps { display: flex; flex-direction: column; position: relative; padding-left: 0.5rem; }
+    .tracker-step { display: flex; align-items: center; gap: 1rem; position: relative; z-index: 2; padding: 0.5rem 0; }
+    .tracker-dot { width: 20px; height: 20px; border-radius: 50%; background: #e5e7eb; border: 4px solid #fff; box-shadow: 0 0 0 2px #e5e7eb; transition: all 0.3s ease; flex-shrink: 0; }
+    .tracker-step.done .tracker-dot { background: #d28a8c; box-shadow: 0 0 0 2px #d28a8c; }
+    .tracker-step span { font-size: 0.9rem; color: var(--muted); font-weight: 600; }
+    .tracker-step.done span { color: var(--ink); font-weight: 700; }
+    
+    .tracker-line { width: 4px; height: 1.5rem; background: #e5e7eb; margin-left: 8px; margin-top: -0.5rem; margin-bottom: -0.5rem; z-index: 1; }
+    .tracker-line.done { background: #d28a8c; }
   </style>
 </head>
 <body>
@@ -125,6 +137,16 @@
 <main>
   <div class="page-inner">
     <h1 class="page-title">My Orders</h1>
+
+    <div class="track-search-box" style="margin-bottom: 2rem; padding: 1.5rem; background: #f9fafb; border-radius: 12px; border: 1px solid var(--border); max-width: 500px;">
+      <label style="display:block; font-size:0.9rem; font-weight:700; color:var(--ink); margin-bottom:0.75rem;">Track Order by ID</label>
+      <div style="display:flex; gap:0.5rem;">
+        <input type="number" id="track-order-id" class="form-input" placeholder="Enter Order ID (e.g. 10)" style="flex:1;" />
+        <button class="btn-primary" type="button" onclick="trackOrderById()" style="padding: 0 1.5rem;">TRACK</button>
+      </div>
+      <p id="track-msg" style="font-size:0.85rem; margin-top:0.75rem; color:#dc2626; display:none; font-weight:600;"></p>
+    </div>
+
     <div id="orders-root"></div>
 
     <!-- Order Detail Panel -->
@@ -160,7 +182,7 @@
       <a href="#">Shipping & Returns</a>
       <a href="#">FAQ</a>
       <a href="#">Size Guide</a>
-      <a href="../orders.html">Order Tracking</a>
+      <a href="../orders.html">Orders</a>
     </div>
     <div class="footer-col">
       <h4>OUR STORY</h4>
@@ -246,6 +268,28 @@
       </div>`).join('')}
     </div>`;
   }
+
+  window.trackOrderById = async function() {
+    const idInput = document.getElementById('track-order-id').value.trim();
+    const msg = document.getElementById('track-msg');
+    msg.style.display = 'none';
+    
+    if (!idInput) {
+      msg.textContent = 'Please enter an Order ID.';
+      msg.style.display = 'block';
+      return;
+    }
+    
+    const orderId = parseInt(idInput);
+    const order = await Orders.getById(orderId);
+    
+    if (order) {
+      showDetail(orderId);
+    } else {
+      msg.textContent = `Order #${orderId} not found in your account.`;
+      msg.style.display = 'block';
+    }
+  };
 
   async function showDetail(id) {
     const order = await Orders.getById(id);
@@ -418,8 +462,13 @@
               </div>
               <div class="pm-expanded" id="upi-opt">
                 <p style="text-align:center; font-size:.9rem; font-weight:500; margin-bottom:.6rem;">Scan to Pay</p>
+                <p style="text-align:center; font-size:.85rem; color:#dc2626; font-weight:600; margin-bottom:.6rem;">Scan QR to pay and enter UTR Number below.</p>
                 <div style="text-align:center;">
-                  <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=upi://pay?pa=store@upi%26pn=HandmadeHeaven%26am=${grandTotal}" alt="UPI QR" style="max-width:180px; width:100%; border-radius:8px; border:1px solid #e5e7eb;" />
+                  <img src="../images/upi.png" alt="UPI QR Code" style="max-width:180px; width:100%; border-radius:8px; border:1px solid #e5e7eb; margin-bottom: 1rem;" />
+                  <div class="form-group" style="margin-top: 0.5rem; text-align: left;">
+                    <label style="display:block; margin-bottom:0.3rem; font-size:0.85rem; font-weight:600; color:var(--ink);">UTR Number / Transaction ID *</label>
+                    <input type="text" id="cust-utr" class="form-input" placeholder="Enter 12-digit UTR Number" maxlength="12" oninput="this.value = this.value.replace(/[^0-9]/g, '')" />
+                  </div>
                 </div>
               </div>
             </label>
@@ -481,8 +530,17 @@
     const selected = document.querySelector('input[name="cust-pay"]:checked');
     if (!selected) { showFlash('Please select a payment method.', 'error'); return; }
     const paymentMethod = selected.value;
+    
+    let utrNumber = '';
+    if (paymentMethod === 'UPI') {
+        utrNumber = document.getElementById('cust-utr').value.trim();
+        if (!utrNumber || utrNumber.length < 12) {
+            alert('Please enter a valid 12-digit UTR Number for UPI payment.');
+            return;
+        }
+    }
 
-    const res = await Orders.confirmAndPay(id, paymentMethod);
+    const res = await Orders.confirmAndPay(id, paymentMethod, utrNumber);
     if (res && res.success) {
       document.getElementById('pay-modal-overlay').remove();
       await renderOrders();

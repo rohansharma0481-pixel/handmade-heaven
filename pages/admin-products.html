@@ -114,6 +114,13 @@
       </div>
       
       <div class="form-group">
+        <label>Artisan / Seller</label>
+        <select id="p-seller">
+          <option value="">-- No Artisan Assigned --</option>
+        </select>
+      </div>
+      
+      <div class="form-group">
         <label>Image Path (e.g. images/bear.jpg)</label>
         <input type="text" id="p-image" value="images/placeholder.jpg" />
       </div>
@@ -130,8 +137,22 @@
 
 <script>
   let products = [];
+  let sellers = [];
+
+  async function loadSellers() {
+    try {
+      const res = await fetch('../backend/sellers.php?action=get');
+      sellers = await res.json();
+      const sel = document.getElementById('p-seller');
+      if (sel && Array.isArray(sellers)) {
+        sel.innerHTML = '<option value="">-- No Artisan Assigned --</option>' + 
+          sellers.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+      }
+    } catch(e) { console.error(e); }
+  }
 
   async function loadProducts() {
+    await loadSellers();
     try {
       const res = await fetch('../backend/products.php?action=get&t=' + Date.now());
       products = await res.json();
@@ -188,6 +209,7 @@
     document.getElementById('p-category').value = p.category;
     document.getElementById('p-image').value = p.image;
     document.getElementById('p-featured').checked = p.featured;
+    document.getElementById('p-seller').value = p.seller_id || '';
     
     document.getElementById('product-modal').classList.add('active');
   }
@@ -222,9 +244,10 @@
     const category = document.getElementById('p-category').value;
     const image = document.getElementById('p-image').value;
     const featured = document.getElementById('p-featured').checked ? 1 : 0;
+    const seller_id = document.getElementById('p-seller').value;
     
     const action = id ? 'edit' : 'add';
-    const payload = { name, description: desc, price, stock, category, image, featured };
+    const payload = { name, description: desc, price, stock, category, image, featured, seller_id };
     if (id) payload.id = id;
     
     try {

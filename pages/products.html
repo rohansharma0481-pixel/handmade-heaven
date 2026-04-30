@@ -62,6 +62,13 @@
       <div class="filter-group">
         <div class="filter-options" id="category-filters"></div>
       </div>
+      
+      <h3 class="sidebar-title" style="margin-top: 1.5rem;">Price Range</h3>
+      <div class="filter-group" style="display: flex; gap: 0.5rem; margin-bottom: 1.5rem;">
+        <input type="number" id="min-price" class="form-input" placeholder="Min ₹" style="padding: 0.5rem; width: 50%;" oninput="applyFilters()" />
+        <input type="number" id="max-price" class="form-input" placeholder="Max ₹" style="padding: 0.5rem; width: 50%;" oninput="applyFilters()" />
+      </div>
+
       <button class="btn-text btn-block" style="text-align:center;margin-top:8px" onclick="clearFilters()">Clear all</button>
     </aside>
 
@@ -104,7 +111,7 @@
       <a href="#">Shipping & Returns</a>
       <a href="#">FAQ</a>
       <a href="#">Size Guide</a>
-      <a href="../orders.html">Order Tracking</a>
+      <a href="../orders.html">Orders</a>
     </div>
     <div class="footer-col">
       <h4>OUR STORY</h4>
@@ -190,11 +197,13 @@
     const cat = (document.querySelector('input[name="cat"]:checked') || {}).value || '';
     const q = (document.getElementById('nav-search-input').value || '').trim().toLowerCase();
     const sort = document.getElementById('sort-select').value;
-    return { cat, q, sort };
+    const minPrice = parseFloat(document.getElementById('min-price').value) || 0;
+    const maxPrice = parseFloat(document.getElementById('max-price').value) || 999999;
+    return { cat, q, sort, minPrice, maxPrice };
   }
 
   function applyFilters() {
-    const { cat, q, sort } = getFilters();
+    const { cat, q, sort, minPrice, maxPrice } = getFilters();
     
     if (cat) {
       document.title = `Handmade ${cat} | Handmade Heaven`;
@@ -204,6 +213,7 @@
 
     let list = [...Inventory.get()];
     if (cat) list = list.filter(p => p.category === cat);
+    list = list.filter(p => p.price >= minPrice && p.price <= maxPrice);
     if (q) {
       const normalizedQ = q.replace(/\s+/g, '').toLowerCase();
       const stemmedQ = normalizedQ.endsWith('s') ? normalizedQ.slice(0, -1) : normalizedQ;
@@ -244,6 +254,8 @@
   function clearFilters() {
     document.getElementById('nav-search-input').value = '';
     document.getElementById('sort-select').value = '';
+    document.getElementById('min-price').value = '';
+    document.getElementById('max-price').value = '';
     catContainer.querySelector('input[value=""]').checked = true;
     window.history.replaceState({}, '', window.location.pathname);
     applyFilters();

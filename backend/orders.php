@@ -13,10 +13,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $phone = trim($input['phone'] ?? '');
         $address = trim($input['address'] ?? '');
         $paymentMethod = $input['paymentMethod'] ?? 'COD';
+        $utrNumber = trim($input['utrNumber'] ?? '');
         $items = $input['items'] ?? [];
         $email = trim($input['email'] ?? '');
         $name = trim($input['name'] ?? '');
         $sellerId = isset($input['sellerId']) ? (int)$input['sellerId'] : 1;
+        $couponCode = $input['couponCode'] ?? null;
+        $discountAmount = isset($input['discountAmount']) ? (float)$input['discountAmount'] : 0.00;
 
         if (!$id || empty($phone) || empty($address)) {
             sendJSON(['error' => 'Missing required order details.'], 400);
@@ -41,8 +44,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
 
             // Insert into orders
-            $stmt = $pdo->prepare("INSERT INTO orders (id, user_id, total, status, phone, address, payment_method, seller_id) VALUES (?, ?, ?, 'pending_approval', ?, ?, ?, ?)");
-            $stmt->execute([$id, $userId, $total, $phone, $address, $paymentMethod, $sellerId]);
+            $stmt = $pdo->prepare("INSERT INTO orders (id, user_id, total, status, phone, address, payment_method, utr_number, seller_id, coupon_code, discount_amount) VALUES (?, ?, ?, 'pending_approval', ?, ?, ?, ?, ?, ?, ?)");
+            $stmt->execute([$id, $userId, $total, $phone, $address, $paymentMethod, $utrNumber, $sellerId, $couponCode, $discountAmount]);
 
             // Insert items and update stock
             $stmtItem = $pdo->prepare("INSERT INTO order_items (order_id, product_id, qty, price) VALUES (?, ?, ?, ?)");
@@ -161,13 +164,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $orderId = $input['orderId'] ?? null;
         $status = $input['status'] ?? 'Processing';
         $paymentMethod = $input['paymentMethod'] ?? 'COD';
+        $utrNumber = trim($input['utrNumber'] ?? '');
 
         if (!$orderId) {
             sendJSON(['error' => 'Missing Order ID.'], 400);
         }
 
-        $stmt = $pdo->prepare("UPDATE orders SET status = ?, payment_method = ? WHERE id = ?");
-        if ($stmt->execute([$status, $paymentMethod, $orderId])) {
+        $stmt = $pdo->prepare("UPDATE orders SET status = ?, payment_method = ?, utr_number = ? WHERE id = ?");
+        if ($stmt->execute([$status, $paymentMethod, $utrNumber, $orderId])) {
             sendJSON(['success' => true]);
         } else {
             sendJSON(['error' => 'Failed to update status and payment method.'], 500);
@@ -210,6 +214,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             sendJSON(['success' => true]);
         } else {
             sendJSON(['error' => 'Failed to update delivery date.'], 500);
+        }
+    }
+    if ($action === 'markPaid') {
+        $input = json_decode(file_get_contents('php://input'), true);
+        $orderId = $input['orderId'] ?? null;
+        $paymentDetails = trim($input['paymentDetails'] ?? '');
+
+        if (!$orderId) {
+            sendJSON(['error' => 'Missing Order ID.'], 400);
+        }
+
+        $stmt = $pdo->prepare("UPDATE orders SET payment_status = 'Paid', payment_details = ? WHERE id = ?");
+        if ($stmt->execute([$paymentDetails, $orderId])) {
+            sendJSON(['success' => true]);
+        } else {
+            sendJSON(['error' => 'Failed to mark as paid.'], 500);
         }
     }
 }

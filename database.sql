@@ -1,13 +1,12 @@
 -- Handmade Heaven Database Schema
-CREATE DATABASE IF NOT EXISTS handmade_heaven;
-USE handmade_heaven;
-
 -- Users Table
 CREATE TABLE IF NOT EXISTS users (
     id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
     email VARCHAR(100) NOT NULL UNIQUE,
     password VARCHAR(255) NOT NULL,
+    phone VARCHAR(15),
+    address TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -32,6 +31,7 @@ CREATE TABLE IF NOT EXISTS orders (
     phone VARCHAR(15),
     address TEXT,
     payment_method VARCHAR(50),
+    utr_number VARCHAR(100),
     preview_image LONGTEXT,
     custom_text LONGTEXT,
     custom_image LONGTEXT,
@@ -58,6 +58,26 @@ CREATE TABLE IF NOT EXISTS reviews (
     rating INT CHECK (rating >= 1 AND rating <= 5),
     text TEXT,
     date DATE,
+    FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+);
+
+-- Admin Table
+CREATE TABLE IF NOT EXISTS admin (
+    admin_id INT AUTO_INCREMENT PRIMARY KEY,
+    admin_name VARCHAR(100) NOT NULL,
+    email VARCHAR(100) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL
+);
+
+-- Wishlist / CART Table
+CREATE TABLE IF NOT EXISTS wishlist_cart (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    product_id INT NOT NULL,
+    item_type ENUM('cart', 'wishlist') DEFAULT 'cart',
+    quantity INT NOT NULL DEFAULT 1,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
 );
 
